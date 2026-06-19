@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — LearnHub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style> body { font-family: 'Inter', sans-serif; } </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+<div class="flex min-h-screen">
+
+  <!-- SIDEBAR -->
+  <aside class="hidden lg:flex w-64 flex-col bg-white border-r border-slate-200 p-4">
+    <div class="flex items-center gap-2 px-2 py-3">
+      <div class="h-9 w-9 rounded-xl bg-rose-600 grid place-items-center text-white font-bold">L</div>
+      <span class="font-extrabold text-lg">LearnHub <span class="text-rose-600 text-xs">Admin</span></span>
+    </div>
+    <nav class="mt-6 space-y-1 text-sm font-medium">
+      <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-rose-50 text-rose-700">📊 Overview</a>
+      <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50">👥 Users</a>
+      <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50">📚 Courses</a>
+      <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50">🗂️ Categories</a>
+      <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50">🛡️ Roles</a>
+      <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50">💳 Payments</a>
+      <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50">⚙️ Settings</a>
+    </nav>
+    <div class="mt-auto flex items-center gap-2 px-2 py-3">
+      <div class="h-9 w-9 rounded-full bg-rose-200"></div>
+      <div class="text-sm"><div class="font-semibold">Admin</div><div class="text-xs text-slate-500">Super Admin</div></div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="flex-1 flex flex-col">
+    <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6">
+      <h1 class="text-lg font-bold">Platform Overview</h1>
+      <div class="flex items-center gap-3">
+        <span class="text-sm text-slate-500">Jun 2026</span>
+        <button class="text-sm font-semibold bg-rose-600 text-white px-4 py-2 rounded-lg hover:bg-rose-700">Generate report</button>
+      </div>
+    </header>
+
+    <main class="p-6 space-y-6">
+      <!-- KPIs -->
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-2xl p-5 ring-1 ring-slate-200">
+          <span class="text-sm text-slate-500">Total users</span>
+          <div class="mt-2 text-3xl font-extrabold">320,480</div>
+          <div class="text-xs text-emerald-600 mt-1">▲ 4,120 this week</div>
+        </div>
+        <div class="bg-white rounded-2xl p-5 ring-1 ring-slate-200">
+          <span class="text-sm text-slate-500">Total courses</span>
+          <div class="mt-2 text-3xl font-extrabold">2,540</div>
+          <div class="text-xs text-amber-600 mt-1">18 pending review</div>
+        </div>
+        <div class="bg-white rounded-2xl p-5 ring-1 ring-slate-200">
+          <span class="text-sm text-slate-500">Platform revenue</span>
+          <div class="mt-2 text-3xl font-extrabold">$1.24M</div>
+          <div class="text-xs text-emerald-600 mt-1">▲ 8.3% MoM</div>
+        </div>
+        <div class="bg-white rounded-2xl p-5 ring-1 ring-slate-200">
+          <span class="text-sm text-slate-500">Active instructors</span>
+          <div class="mt-2 text-3xl font-extrabold">850</div>
+          <div class="text-xs text-slate-400 mt-1">62 new applications</div>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-6">
+        <!-- GROWTH CHART -->
+        <div class="lg:col-span-2 bg-white rounded-2xl ring-1 ring-slate-200 p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="font-bold text-lg">User & revenue growth</h2>
+            <div class="flex gap-2 text-xs">
+              <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-rose-500"></span>Users</span>
+              <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-indigo-500"></span>Revenue</span>
+            </div>
+          </div>
+          <div class="flex items-end justify-between gap-2 h-52">
+            <div class="flex-1 flex items-end gap-1"><div class="w-1/2 bg-rose-300 rounded-t" style="height:50%"></div><div class="w-1/2 bg-indigo-300 rounded-t" style="height:40%"></div></div>
+            <div class="flex-1 flex items-end gap-1"><div class="w-1/2 bg-rose-300 rounded-t" style="height:62%"></div><div class="w-1/2 bg-indigo-300 rounded-t" style="height:55%"></div></div>
+            <div class="flex-1 flex items-end gap-1"><div class="w-1/2 bg-rose-400 rounded-t" style="height:70%"></div><div class="w-1/2 bg-indigo-400 rounded-t" style="height:60%"></div></div>
+            <div class="flex-1 flex items-end gap-1"><div class="w-1/2 bg-rose-400 rounded-t" style="height:80%"></div><div class="w-1/2 bg-indigo-400 rounded-t" style="height:72%"></div></div>
+            <div class="flex-1 flex items-end gap-1"><div class="w-1/2 bg-rose-500 rounded-t" style="height:92%"></div><div class="w-1/2 bg-indigo-500 rounded-t" style="height:85%"></div></div>
+            <div class="flex-1 flex items-end gap-1"><div class="w-1/2 bg-rose-500 rounded-t" style="height:100%"></div><div class="w-1/2 bg-indigo-500 rounded-t" style="height:95%"></div></div>
+          </div>
+        </div>
+
+        <!-- MODERATION QUEUE -->
+        <div class="bg-white rounded-2xl ring-1 ring-slate-200 p-6">
+          <h2 class="font-bold text-lg mb-4">Pending review</h2>
+          <div class="space-y-3">
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
+              <div class="h-9 w-9 rounded-lg bg-indigo-100 grid place-items-center">📚</div>
+              <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">Kubernetes in Depth</div><div class="text-xs text-slate-400">by M. Chen</div></div>
+              <button class="text-xs bg-emerald-600 text-white px-2 py-1 rounded">Approve</button>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
+              <div class="h-9 w-9 rounded-lg bg-amber-100 grid place-items-center">🧑‍🏫</div>
+              <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">New instructor</div><div class="text-xs text-slate-400">Laura Bennett</div></div>
+              <button class="text-xs bg-emerald-600 text-white px-2 py-1 rounded">Review</button>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
+              <div class="h-9 w-9 rounded-lg bg-rose-100 grid place-items-center">🚩</div>
+              <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">Reported review</div><div class="text-xs text-slate-400">Course #1842</div></div>
+              <button class="text-xs bg-rose-600 text-white px-2 py-1 rounded">View</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- USERS TABLE -->
+      <div class="bg-white rounded-2xl ring-1 ring-slate-200 overflow-hidden">
+        <div class="flex items-center justify-between p-6 border-b border-slate-100">
+          <h2 class="font-bold text-lg">Recent users</h2>
+          <div class="flex gap-2">
+            <select class="text-sm border border-slate-200 rounded-lg px-2 py-2"><option>All roles</option><option>Students</option><option>Instructors</option></select>
+            <input placeholder="Search users…" class="bg-slate-100 rounded-lg px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-rose-400" />
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-500 text-left">
+              <tr>
+                <th class="px-6 py-3 font-medium">User</th>
+                <th class="px-6 py-3 font-medium">Role</th>
+                <th class="px-6 py-3 font-medium">Joined</th>
+                <th class="px-6 py-3 font-medium">Status</th>
+                <th class="px-6 py-3 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr class="hover:bg-slate-50">
+                <td class="px-6 py-4"><div class="flex items-center gap-3"><div class="h-8 w-8 rounded-full bg-indigo-200"></div><div><div class="font-semibold">Amir Karimov</div><div class="text-xs text-slate-400">amir@mail.com</div></div></div></td>
+                <td class="px-6 py-4"><span class="text-xs font-semibold bg-slate-100 text-slate-700 px-2 py-1 rounded-full">Student</span></td>
+                <td class="px-6 py-4 text-slate-500">Jun 12, 2026</td>
+                <td class="px-6 py-4"><span class="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">Active</span></td>
+                <td class="px-6 py-4 text-right"><button class="text-rose-600 font-semibold mr-3">Suspend</button><button class="text-slate-400">⋯</button></td>
+              </tr>
+              <tr class="hover:bg-slate-50">
+                <td class="px-6 py-4"><div class="flex items-center gap-3"><div class="h-8 w-8 rounded-full bg-amber-200"></div><div><div class="font-semibold">Sarah Mitchell</div><div class="text-xs text-slate-400">sarah@mail.com</div></div></div></td>
+                <td class="px-6 py-4"><span class="text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-1 rounded-full">Instructor</span></td>
+                <td class="px-6 py-4 text-slate-500">May 3, 2026</td>
+                <td class="px-6 py-4"><span class="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">Active</span></td>
+                <td class="px-6 py-4 text-right"><button class="text-rose-600 font-semibold mr-3">Suspend</button><button class="text-slate-400">⋯</button></td>
+              </tr>
+              <tr class="hover:bg-slate-50">
+                <td class="px-6 py-4"><div class="flex items-center gap-3"><div class="h-8 w-8 rounded-full bg-rose-200"></div><div><div class="font-semibold">John Doe</div><div class="text-xs text-slate-400">john@mail.com</div></div></div></td>
+                <td class="px-6 py-4"><span class="text-xs font-semibold bg-slate-100 text-slate-700 px-2 py-1 rounded-full">Student</span></td>
+                <td class="px-6 py-4 text-slate-500">Apr 21, 2026</td>
+                <td class="px-6 py-4"><span class="text-xs font-semibold bg-rose-100 text-rose-700 px-2 py-1 rounded-full">Suspended</span></td>
+                <td class="px-6 py-4 text-right"><button class="text-emerald-600 font-semibold mr-3">Restore</button><button class="text-slate-400">⋯</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

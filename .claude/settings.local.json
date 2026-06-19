@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npm *)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\m_qodirxonov\\\\Desktop\\\\go\\\\lms\\\\frontend\\\\wireframes\" | Select-Object Name, @{N='KB';E={[math]::Round\\($_.Length/1KB,1\\)}} | Format-Table -AutoSize)",
+      "PowerShell(npm install *)"
+    ]
+  }
+}

@@ -1,0 +1,53 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { DataTable, type Column } from "@/components/shared/data-table";
+import { coursesService } from "@/services/courses.service";
+import { formatNumber, formatPrice } from "@/lib/utils";
+import type { Course } from "@/types";
+
+export default function AdminCoursesPage() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin", "courses"],
+    queryFn: () => coursesService.list({ pageSize: 50 }),
+  });
+
+  const columns: Column<Course>[] = [
+    {
+      key: "title",
+      header: "Course",
+      render: (c) => (
+        <div className="flex items-center gap-3">
+          <div className={`h-9 w-12 rounded bg-gradient-to-br ${c.thumbnailColor}`} />
+          <div>
+            <div className="font-semibold">{c.title}</div>
+            <div className="text-xs text-muted-foreground">{c.category}</div>
+          </div>
+        </div>
+      ),
+    },
+    { key: "instructor", header: "Instructor", accessor: (c) => c.instructor.name },
+    { key: "students", header: "Students", accessor: (c) => formatNumber(c.studentCount) },
+    { key: "price", header: "Price", accessor: (c) => formatPrice(c.price) },
+    { key: "status", header: "Status", render: () => <Badge variant="success">Published</Badge> },
+    {
+      key: "actions",
+      header: "Actions",
+      align: "right",
+      render: () => (
+        <Button variant="ghost" size="sm" className="text-rose-600">
+          Unpublish
+        </Button>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-extrabold">Course management</h1>
+      <DataTable columns={columns} data={data?.items ?? []} isLoading={isLoading} rowKey={(c) => c.id} />
+    </div>
+  );
+}

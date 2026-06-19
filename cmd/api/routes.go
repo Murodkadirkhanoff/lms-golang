@@ -22,6 +22,8 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.healthcheckHandler)
 	router.HandlerFunc(http.MethodPost, "/v1/categories", app.createCategoryHandler)
 	router.HandlerFunc(http.MethodGet, "/v1/categories/:id", app.showCategoryHandler)
+	router.HandlerFunc(http.MethodPatch, "/v1/categories/:id", app.updateCategoryHandler)
+	router.HandlerFunc(http.MethodDelete, "/v1/categories/:id", app.deleteCategoryHandler)
 
 	return app.recoverPanic(router)
 }
