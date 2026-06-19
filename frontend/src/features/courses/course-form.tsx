@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
-import { ImagePlus } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { ImagePlus, Info } from "lucide-react";
+import { CurriculumBuilder } from "./curriculum-builder";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,30 +14,54 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { coursesService } from "@/services/courses.service";
+import { categoriesService } from "@/services/categories.service";
 import { courseSchema, type CourseFormValues } from "./course-schema";
-import { CATEGORIES, LANGUAGES, ROUTES } from "@/constants";
+import { LANGUAGES, ROUTES } from "@/constants";
 import { slugify } from "@/lib/utils";
 
 export function CourseForm() {
   const router = useRouter();
   const [serverError, setServerError] = useState("");
+
+  const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: categoriesService.list });
+
+  const methods = useForm<CourseFormValues>({
+    resolver: zodResolver(courseSchema),
+    defaultValues: { lang: "uz", price: 0, isPublished: false, categoryId: null, description: "", modules: [] },
+  });
   const {
     register,
     handleSubmit,
     control,
     watch,
     formState: { errors },
-  } = useForm<CourseFormValues>({
-    resolver: zodResolver(courseSchema),
-    defaultValues: { lang: "uz", price: 0, isPublished: false, category: "" },
-  });
+  } = methods;
 
   const title = watch("title") ?? "";
+  const description = watch("description") ?? "";
   const price = watch("price");
   const slug = slugify(title);
 
   const mutation = useMutation({
-    mutationFn: (values: CourseFormValues) => coursesService.create(values),
+    mutationFn: (values: CourseFormValues) =>
+      coursesService.create({
+        title: values.title,
+        description: values.description ?? "",
+        categoryId: values.categoryId,
+        lang: values.lang,
+        price: values.price,
+        isPublished: values.isPublished,
+        modules: values.modules.map((m) => ({
+          title: m.title,
+          lessons: m.lessons.map((l) => ({
+            title: l.title,
+            contentUrl: l.contentUrl ?? "",
+            durationSeconds: Math.round((l.durationMinutes ?? 0) * 60),
+            price: l.price,
+            isFree: l.isFree,
+          })),
+        })),
+      }),
     onSuccess: () => router.push(ROUTES.studioCourses),
     onError: (err) => setServerError(err instanceof Error ? err.message : "Failed to create course"),
   });
@@ -48,6 +73,7 @@ export function CourseForm() {
     });
 
   return (
+    <FormProvider {...methods}>
     <form className="grid max-w-5xl gap-6 lg:grid-cols-3">
       <div className="space-y-6 lg:col-span-2">
         {serverError && <div className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{serverError}</div>}
@@ -81,37 +107,39 @@ export function CourseForm() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="description">
-                Description <span className="text-rose-500">*</span>
-              </Label>
+              <Label htmlFor="description">Description</Label>
               <Textarea id="description" rows={5} placeholder="What will students learn?" {...register("description")} />
-              {errors.description && <p className="text-xs text-destructive">{errors.description.message}</p>}
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{errors.description?.message ?? "Optional — you can add this later."}</span>
+                <span>{description.length} / 5000</span>
+              </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>
-                  Category <span className="text-rose-500">*</span>
-                </Label>
+                <Label>Category</Label>
                 <Controller
                   control={control}
-                  name="category"
+                  name="categoryId"
                   render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select
+                      value={field.value ? String(field.value) : ""}
+                      onValueChange={(v) => field.onChange(Number(v))}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        {CATEGORIES.map((c) => (
-                          <SelectItem key={c} value={c}>
-                            {c}
+                        {categories?.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>
+                            {c.nameEn}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   )}
                 />
-                {errors.category && <p className="text-xs text-destructive">{errors.category.message}</p>}
+                {errors.categoryId && <p className="text-xs text-destructive">{errors.categoryId.message}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -140,8 +168,16 @@ export function CourseForm() {
                 />
               </div>
             </div>
+
+            <p className="flex items-center gap-2 rounded-lg bg-secondary/60 px-3 py-2 text-xs text-muted-foreground">
+              <Info className="size-4 shrink-0" />
+              You are set as the instructor automatically — anyone can create courses, no separate role needed.
+            </p>
           </CardContent>
         </Card>
+
+        {/* Curriculum: modules -> lessons */}
+        <CurriculumBuilder />
 
         {/* Thumbnail */}
         <Card>
@@ -218,5 +254,6 @@ export function CourseForm() {
         </Card>
       </div>
     </form>
+    </FormProvider>
   );
 }

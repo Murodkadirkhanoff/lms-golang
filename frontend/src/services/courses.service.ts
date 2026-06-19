@@ -4,13 +4,31 @@ import { courses } from "./mock/data";
 
 const delay = (ms = 400) => new Promise((r) => setTimeout(r, ms));
 
+// Mirrors the `lessons` table (duration in seconds; position from order).
+export interface CreateLessonInput {
+  title: string;
+  contentUrl: string;
+  durationSeconds: number;
+  price: number;
+  isFree: boolean;
+}
+
+// Mirrors the `modules` table (position from order).
+export interface CreateModuleInput {
+  title: string;
+  lessons: CreateLessonInput[];
+}
+
+// Mirrors the `courses` table columns. instructor_id is set server-side from
+// the authenticated user, so it is not part of this input.
 export interface CreateCourseInput {
   title: string;
   description: string;
-  category: string;
+  categoryId: number | null;
   lang: "uz" | "ru" | "en";
   price: number;
   isPublished: boolean;
+  modules: CreateModuleInput[];
 }
 
 export const coursesService = {
@@ -91,13 +109,34 @@ export const coursesService = {
         slug: input.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""),
         title: input.title,
         description: input.description,
-        category: input.category,
         lang: input.lang,
         price: input.price,
         isPublished: input.isPublished,
       };
     }
-    const { data } = await api.post("/courses", input);
+    // Maps to the Go backend columns (snake_case). instructor_id is set by the
+    // server from the authenticated user. Modules/lessons carry their position
+    // from array order, matching the `modules`/`lessons` tables.
+    const { data } = await api.post("/courses", {
+      title: input.title,
+      description: input.description,
+      category_id: input.categoryId,
+      lang: input.lang,
+      price: input.price,
+      is_published: input.isPublished,
+      modules: input.modules.map((m, mi) => ({
+        title: m.title,
+        position: mi,
+        lessons: m.lessons.map((l, li) => ({
+          title: l.title,
+          content_url: l.contentUrl,
+          duration_seconds: l.durationSeconds,
+          position: li,
+          price: l.price,
+          is_free: l.isFree,
+        })),
+      })),
+    });
     return data.course;
   },
 };
