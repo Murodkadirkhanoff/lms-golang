@@ -5,27 +5,29 @@ import { BarChart3, BookOpen, LayoutDashboard, Plus } from "lucide-react";
 import { SidebarLayout, type SidebarItem } from "@/components/shared/sidebar-layout";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/constants";
-
-const items: SidebarItem[] = [
-  { href: ROUTES.studio, label: "Dashboard", icon: LayoutDashboard },
-  { href: ROUTES.studioCourses, label: "My Courses", icon: BookOpen },
-  { href: ROUTES.studioAnalytics, label: "Analytics", icon: BarChart3 },
-];
+import { useT } from "@/providers/locale-provider";
 
 export default function StudioLayout({ children }: { children: React.ReactNode }) {
+  const t = useT();
+  const items: SidebarItem[] = [
+    { href: ROUTES.studio, label: t("studio.dashboard"), icon: LayoutDashboard },
+    { href: ROUTES.studioCourses, label: t("studio.myCourses"), icon: BookOpen },
+    { href: ROUTES.studioAnalytics, label: t("studio.analytics"), icon: BarChart3 },
+  ];
+
   return (
     <SidebarLayout
       items={items}
-      title="Studio"
+      title={t("studio.title")}
       variant="dark"
       topbar={
         <>
           <Button asChild variant="ghost" size="sm">
-            <Link href={ROUTES.dashboard}>← Back to learning</Link>
+            <Link href={ROUTES.dashboard}>{t("studio.backToLearning")}</Link>
           </Button>
           <Button asChild>
             <Link href={ROUTES.studioCourseNew}>
-              <Plus className="size-4" /> New course
+              <Plus className="size-4" /> {t("studio.newCourse")}
             </Link>
           </Button>
         </>

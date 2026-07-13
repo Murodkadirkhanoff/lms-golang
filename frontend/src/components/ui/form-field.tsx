@@ -11,6 +11,7 @@ interface FormFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
 export const FormField = React.forwardRef<HTMLInputElement, FormFieldProps>(
   ({ label, error, id, className, ...props }, ref) => {
     const fieldId = id ?? props.name;
+    const errorId = error ? `${fieldId}-error` : undefined;
     return (
       <div className="space-y-1.5">
         <Label htmlFor={fieldId}>{label}</Label>
@@ -19,9 +20,14 @@ export const FormField = React.forwardRef<HTMLInputElement, FormFieldProps>(
           ref={ref}
           className={cn(error && "border-destructive focus-visible:ring-destructive", className)}
           aria-invalid={!!error}
+          aria-describedby={errorId}
           {...props}
         />
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && (
+          <p id={errorId} role="alert" className="text-xs text-destructive">
+            {error}
+          </p>
+        )}
       </div>
     );
   },

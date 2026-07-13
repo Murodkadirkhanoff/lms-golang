@@ -7,9 +7,10 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatPrice(price: number): string {
   if (price === 0) return "Free";
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("uz-UZ", {
     style: "currency",
-    currency: "USD",
+    currency: "UZS",
+    maximumFractionDigits: 0,
   }).format(price);
 }
 

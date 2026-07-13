@@ -10,8 +10,10 @@ import { FormField } from "@/components/ui/form-field";
 import { authService } from "@/services/auth.service";
 import { forgotPasswordSchema, type ForgotPasswordValues } from "@/features/auth/schemas";
 import { ROUTES } from "@/constants";
+import { useT } from "@/providers/locale-provider";
 
 export default function ForgotPasswordPage() {
+  const t = useT();
   const [sent, setSent] = useState(false);
   const {
     register,
@@ -30,12 +32,10 @@ export default function ForgotPasswordPage() {
         <div className="mx-auto grid size-12 place-items-center rounded-full bg-emerald-100 text-emerald-600">
           <CheckCircle2 className="size-6" />
         </div>
-        <h1 className="mt-4 text-2xl font-extrabold">Check your email</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          We&apos;ve sent a password reset link to your inbox.
-        </p>
+        <h1 className="mt-4 text-2xl font-extrabold">{t("auth.checkEmail")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("auth.resetSent")}</p>
         <Button asChild variant="outline" className="mt-6">
-          <Link href={ROUTES.login}>Back to login</Link>
+          <Link href={ROUTES.login}>{t("auth.backToLogin")}</Link>
         </Button>
       </div>
     );
@@ -43,22 +43,20 @@ export default function ForgotPasswordPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-extrabold">Reset your password</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Enter your email and we&apos;ll send you a reset link.
-      </p>
+      <h1 className="text-2xl font-extrabold">{t("auth.resetTitle")}</h1>
+      <p className="mt-1 text-sm text-muted-foreground">{t("auth.resetSubtitle")}</p>
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
-        <FormField label="Email" type="email" placeholder="you@example.com" error={errors.email?.message} {...register("email")} />
+        <FormField label={t("auth.email")} type="email" placeholder="you@example.com" error={errors.email?.message} {...register("email")} />
         <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
-          {isSubmitting ? "Sending…" : "Send reset link"}
+          {isSubmitting ? t("auth.sending") : t("auth.sendReset")}
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
-        Remembered it?{" "}
+        {t("auth.rememberedIt")}{" "}
         <Link href={ROUTES.login} className="font-semibold text-primary hover:underline">
-          Log in
+          {t("common.login")}
         </Link>
       </p>
     </div>

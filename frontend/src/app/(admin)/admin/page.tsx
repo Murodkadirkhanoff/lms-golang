@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { adminService } from "@/services/admin.service";
 import { formatNumber, formatPrice } from "@/lib/utils";
+import { useT } from "@/providers/locale-provider";
 
 const growth = [
   [50, 40],
@@ -15,18 +16,19 @@ const growth = [
 ];
 
 export default function AdminOverviewPage() {
+  const t = useT();
   const { data } = useQuery({ queryKey: ["admin", "stats"], queryFn: adminService.getStats });
 
   const kpis = [
-    { label: "Total users", value: data ? formatNumber(data.totalUsers) : "—", trend: "▲ 4,120 this week" },
-    { label: "Total courses", value: data ? formatNumber(data.totalCourses) : "—", trend: "18 pending review" },
-    { label: "Platform revenue", value: data ? formatPrice(data.revenue) : "—", trend: "▲ 8.3% MoM" },
-    { label: "Active instructors", value: data ? formatNumber(data.activeInstructors) : "—", trend: "62 new applications" },
+    { label: t("admin.totalUsers"), value: data ? formatNumber(data.totalUsers) : "—", trend: t("admin.usersTrend") },
+    { label: t("admin.totalCourses"), value: data ? formatNumber(data.totalCourses) : "—", trend: t("admin.coursesTrend") },
+    { label: t("admin.platformRevenue"), value: data ? formatPrice(data.revenue) : "—", trend: t("admin.revenueTrend") },
+    { label: t("admin.activeInstructors"), value: data ? formatNumber(data.activeInstructors) : "—", trend: t("admin.instructorsTrend") },
   ];
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-extrabold">Platform overview</h1>
+      <h1 className="text-2xl font-extrabold">{t("admin.platformOverview")}</h1>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((k) => (
@@ -40,13 +42,13 @@ export default function AdminOverviewPage() {
 
       <Card className="p-6">
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-lg font-bold">User &amp; revenue growth</h2>
+          <h2 className="text-lg font-bold">{t("admin.growthTitle")}</h2>
           <div className="flex gap-3 text-xs">
             <span className="flex items-center gap-1">
-              <span className="size-2 rounded-full bg-rose-500" /> Users
+              <span className="size-2 rounded-full bg-rose-500" /> {t("admin.legendUsers")}
             </span>
             <span className="flex items-center gap-1">
-              <span className="size-2 rounded-full bg-primary" /> Revenue
+              <span className="size-2 rounded-full bg-primary" /> {t("admin.legendRevenue")}
             </span>
           </div>
         </div>

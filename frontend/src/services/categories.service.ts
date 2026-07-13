@@ -3,13 +3,26 @@ import type { Category } from "@/types";
 
 const delay = (ms = 300) => new Promise((r) => setTimeout(r, ms));
 
+// Categories are at most two levels deep: a parent (parentId === null) and its
+// children. Courses are assigned to a child (leaf) category.
 const mockCategories: Category[] = [
-  { id: 1, slug: "development", nameEn: "Development", nameUz: "Dasturlash", nameRu: "Разработка" },
-  { id: 2, slug: "design", nameEn: "Design", nameUz: "Dizayn", nameRu: "Дизайн" },
-  { id: 3, slug: "business", nameEn: "Business", nameUz: "Biznes", nameRu: "Бизнес" },
-  { id: 4, slug: "marketing", nameEn: "Marketing", nameUz: "Marketing", nameRu: "Маркетинг" },
-  { id: 5, slug: "data-science", nameEn: "Data Science", nameUz: "Data Science", nameRu: "Наука о данных" },
-  { id: 6, slug: "photography", nameEn: "Photography", nameUz: "Fotografiya", nameRu: "Фотография" },
+  // Parents
+  { id: 1, slug: "development", nameEn: "Development", nameUz: "Dasturlash", nameRu: "Разработка", parentId: null },
+  { id: 2, slug: "design", nameEn: "Design", nameUz: "Dizayn", nameRu: "Дизайн", parentId: null },
+  { id: 3, slug: "business", nameEn: "Business", nameUz: "Biznes", nameRu: "Бизнес", parentId: null },
+  { id: 4, slug: "marketing", nameEn: "Marketing", nameUz: "Marketing", nameRu: "Маркетинг", parentId: null },
+  { id: 5, slug: "data-science", nameEn: "Data Science", nameUz: "Data Science", nameRu: "Наука о данных", parentId: null },
+  // Children
+  { id: 7, slug: "web-development", nameEn: "Web Development", nameUz: "Veb dasturlash", nameRu: "Веб-разработка", parentId: 1 },
+  { id: 8, slug: "mobile-development", nameEn: "Mobile Development", nameUz: "Mobil dasturlash", nameRu: "Мобильная разработка", parentId: 1 },
+  { id: 9, slug: "ui-ux-design", nameEn: "UI/UX Design", nameUz: "UI/UX dizayn", nameRu: "UI/UX дизайн", parentId: 2 },
+  { id: 10, slug: "graphic-design", nameEn: "Graphic Design", nameUz: "Grafik dizayn", nameRu: "Графический дизайн", parentId: 2 },
+  { id: 11, slug: "entrepreneurship", nameEn: "Entrepreneurship", nameUz: "Tadbirkorlik", nameRu: "Предпринимательство", parentId: 3 },
+  { id: 12, slug: "management", nameEn: "Management", nameUz: "Menejment", nameRu: "Менеджмент", parentId: 3 },
+  { id: 13, slug: "digital-marketing", nameEn: "Digital Marketing", nameUz: "Raqamli marketing", nameRu: "Цифровой маркетинг", parentId: 4 },
+  { id: 14, slug: "seo", nameEn: "SEO", nameUz: "SEO", nameRu: "SEO", parentId: 4 },
+  { id: 15, slug: "machine-learning", nameEn: "Machine Learning", nameUz: "Mashinali o‘qitish", nameRu: "Машинное обучение", parentId: 5 },
+  { id: 16, slug: "data-analysis", nameEn: "Data Analysis", nameUz: "Ma’lumotlar tahlili", nameRu: "Анализ данных", parentId: 5 },
 ];
 
 export interface CreateCategoryInput {

@@ -19,9 +19,11 @@ import {
 import { coursesService } from "@/services/courses.service";
 import { ROUTES } from "@/constants";
 import { formatNumber, formatPrice } from "@/lib/utils";
+import { useT } from "@/providers/locale-provider";
 import type { Course } from "@/types";
 
 export default function StudioCoursesPage() {
+  const t = useT();
   const { data, isLoading } = useQuery({
     queryKey: ["studio", "courses"],
     queryFn: () => coursesService.list({ pageSize: 50 }),
@@ -31,7 +33,7 @@ export default function StudioCoursesPage() {
   const columns: Column<Course>[] = [
     {
       key: "title",
-      header: "Course",
+      header: t("studio.colCourse"),
       render: (c) => (
         <div className="flex items-center gap-3">
           <div className={`h-9 w-12 rounded bg-gradient-to-br ${c.thumbnailColor}`} />
@@ -41,24 +43,24 @@ export default function StudioCoursesPage() {
     },
     {
       key: "status",
-      header: "Status",
+      header: t("studio.colStatus"),
       render: (c) =>
-        c.isPublished ? <Badge variant="success">Published</Badge> : <Badge variant="warning">Draft</Badge>,
+        c.isPublished ? <Badge variant="success">{t("studio.published")}</Badge> : <Badge variant="warning">{t("studio.draft")}</Badge>,
     },
-    { key: "students", header: "Students", accessor: (c) => formatNumber(c.studentCount) },
-    { key: "rating", header: "Rating", accessor: (c) => `${c.rating} ★` },
-    { key: "revenue", header: "Revenue", render: (c) => <span className="font-semibold">{formatPrice(c.price * c.studentCount)}</span> },
+    { key: "students", header: t("studio.colStudents"), accessor: (c) => formatNumber(c.studentCount) },
+    { key: "rating", header: t("studio.colRating"), accessor: (c) => `${c.rating} ★` },
+    { key: "revenue", header: t("studio.colRevenue"), render: (c) => <span className="font-semibold">{formatPrice(c.price * c.studentCount)}</span> },
     {
       key: "actions",
-      header: "Actions",
+      header: t("studio.colActions"),
       align: "right",
       render: (c) => (
         <div className="flex justify-end gap-2">
           <Button asChild variant="ghost" size="sm">
-            <Link href={ROUTES.studioCourseEdit(c.id)}>Edit</Link>
+            <Link href={ROUTES.studioCourseEdit(c.id)}>{t("studio.edit")}</Link>
           </Button>
           <Button variant="ghost" size="sm" className="text-rose-600" onClick={() => setToDelete(c)}>
-            Delete
+            {t("studio.delete")}
           </Button>
         </div>
       ),
@@ -68,10 +70,10 @@ export default function StudioCoursesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold">My Courses</h1>
+        <h1 className="text-2xl font-extrabold">{t("studio.myCourses")}</h1>
         <Button asChild>
           <Link href={ROUTES.studioCourseNew}>
-            <Plus className="size-4" /> New course
+            <Plus className="size-4" /> {t("studio.newCourse")}
           </Link>
         </Button>
       </div>
@@ -81,25 +83,24 @@ export default function StudioCoursesPage() {
         data={data?.items ?? []}
         isLoading={isLoading}
         rowKey={(c) => c.id}
-        emptyMessage="You haven't created any courses yet."
+        emptyMessage={t("studio.noCourses")}
       />
 
       {/* Delete confirmation modal */}
       <Dialog open={!!toDelete} onOpenChange={(open) => !open && setToDelete(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete course?</DialogTitle>
+            <DialogTitle>{t("studio.deleteTitle")}</DialogTitle>
             <DialogDescription>
-              This will permanently delete <span className="font-semibold">{toDelete?.title}</span>. This action cannot be
-              undone.
+              {t("studio.deleteDesc", { title: toDelete?.title ?? "" })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline">{t("common.cancel")}</Button>
             </DialogClose>
             <Button variant="destructive" onClick={() => setToDelete(null)}>
-              Delete course
+              {t("studio.deleteCourse")}
             </Button>
           </DialogFooter>
         </DialogContent>

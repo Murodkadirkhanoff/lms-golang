@@ -1,19 +1,23 @@
+"use client";
+
 import { AlertCircle, Inbox, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useT } from "@/providers/locale-provider";
 
-export function LoadingState({ label = "Loading…", className }: { label?: string; className?: string }) {
+export function LoadingState({ label, className }: { label?: string; className?: string }) {
+  const t = useT();
   return (
     <div className={cn("flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground", className)}>
       <Loader2 className="size-6 animate-spin" />
-      <p className="text-sm">{label}</p>
+      <p className="text-sm">{label ?? t("common.loading")}</p>
     </div>
   );
 }
 
 export function EmptyState({
-  title = "Nothing here yet",
+  title,
   description,
   action,
   className,
@@ -23,13 +27,14 @@ export function EmptyState({
   action?: React.ReactNode;
   className?: string;
 }) {
+  const t = useT();
   return (
     <div className={cn("flex flex-col items-center justify-center gap-3 py-16 text-center", className)}>
       <div className="grid size-12 place-items-center rounded-full bg-secondary text-muted-foreground">
         <Inbox className="size-6" />
       </div>
       <div>
-        <p className="font-semibold">{title}</p>
+        <p className="font-semibold">{title ?? t("common.nothingHere")}</p>
         {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
       </div>
       {action}
@@ -38,7 +43,7 @@ export function EmptyState({
 }
 
 export function ErrorState({
-  title = "Something went wrong",
+  title,
   description,
   onRetry,
   className,
@@ -48,18 +53,19 @@ export function ErrorState({
   onRetry?: () => void;
   className?: string;
 }) {
+  const t = useT();
   return (
     <div className={cn("flex flex-col items-center justify-center gap-3 py-16 text-center", className)}>
       <div className="grid size-12 place-items-center rounded-full bg-rose-100 text-rose-600">
         <AlertCircle className="size-6" />
       </div>
       <div>
-        <p className="font-semibold">{title}</p>
+        <p className="font-semibold">{title ?? t("common.somethingWrong")}</p>
         {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
       </div>
       {onRetry && (
         <Button variant="outline" size="sm" onClick={onRetry}>
-          Try again
+          {t("common.tryAgain")}
         </Button>
       )}
     </div>

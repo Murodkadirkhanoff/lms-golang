@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { LoadingState, EmptyState, ErrorState } from "@/components/shared/states";
 import { dashboardService } from "@/services/dashboard.service";
 import { formatDate } from "@/lib/utils";
+import { useT } from "@/providers/locale-provider";
 
 export default function CertificatesPage() {
+  const t = useT();
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["certificates"],
     queryFn: dashboardService.getCertificates,
@@ -17,8 +19,8 @@ export default function CertificatesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold">Certificates</h1>
-        <p className="text-muted-foreground">Your earned certificates of completion.</p>
+        <h1 className="text-2xl font-extrabold">{t("certs.title")}</h1>
+        <p className="text-muted-foreground">{t("certs.subtitle")}</p>
       </div>
 
       {isLoading ? (
@@ -26,7 +28,7 @@ export default function CertificatesPage() {
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : !data || data.length === 0 ? (
-        <EmptyState title="No certificates yet" description="Complete a course to earn your first certificate." />
+        <EmptyState title={t("certs.emptyTitle")} description={t("certs.emptyDesc")} />
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {data.map((c) => (
@@ -36,9 +38,9 @@ export default function CertificatesPage() {
               </div>
               <div className="p-5">
                 <h3 className="font-bold">{c.courseTitle}</h3>
-                <p className="mt-1 text-xs text-muted-foreground">Issued {formatDate(c.issuedAt)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t("certs.issued", { date: formatDate(c.issuedAt) })}</p>
                 <Button variant="outline" size="sm" className="mt-4 w-full">
-                  <Download className="size-4" /> Download PDF
+                  <Download className="size-4" /> {t("certs.download")}
                 </Button>
               </div>
             </Card>

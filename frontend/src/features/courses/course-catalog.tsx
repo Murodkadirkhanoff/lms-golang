@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -10,17 +11,53 @@ import { CardGridSkeleton, EmptyState, ErrorState } from "@/components/shared/st
 import { Pagination } from "@/components/shared/pagination";
 import { coursesService } from "@/services/courses.service";
 import { CATEGORIES, SORT_OPTIONS } from "@/constants";
+import { useT } from "@/providers/locale-provider";
 import type { CourseQuery } from "@/types";
 
 const PAGE_SIZE = 8;
 
-export function CourseCatalog() {
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("All");
-  const [sort, setSort] = useState<CourseQuery["sort"]>("popular");
-  const [page, setPage] = useState(1);
+interface CourseCatalogProps {
+  initialSearch?: string;
+  initialCategory?: string;
+  initialSort?: CourseQuery["sort"];
+  initialPage?: number;
+}
 
-  const query: CourseQuery = { search, category, sort, page, pageSize: PAGE_SIZE };
+export function CourseCatalog({
+  initialSearch = "",
+  initialCategory = "All",
+  initialSort = "popular",
+  initialPage = 1,
+}: CourseCatalogProps) {
+  const t = useT();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [search, setSearch] = useState(initialSearch);
+  // Debounced copy of `search` — only this drives the query, so typing doesn't
+  // fire a request (or a URL update) on every keystroke.
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
+  const [category, setCategory] = useState(initialCategory);
+  const [sort, setSort] = useState<CourseQuery["sort"]>(initialSort);
+  const [page, setPage] = useState(initialPage);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(id);
+  }, [search]);
+
+  // Reflect the active filters in the URL so results are shareable and the
+  // browser back button restores previous filter states.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (debouncedSearch) params.set("search", debouncedSearch);
+    if (category !== "All") params.set("category", category);
+    if (sort && sort !== "popular") params.set("sort", sort);
+    if (page > 1) params.set("page", String(page));
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [debouncedSearch, category, sort, page, pathname, router]);
+
+  const query: CourseQuery = { search: debouncedSearch, category, sort, page, pageSize: PAGE_SIZE };
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["courses", query],
@@ -36,8 +73,10 @@ export function CourseCatalog() {
   return (
     <div className="mx-auto max-w-7xl px-6 py-10">
       <div className="mb-8">
-        <h1 className="text-3xl font-extrabold">Explore courses</h1>
-        <p className="mt-2 text-muted-foreground">{data ? `${data.total} courses` : "Browse our catalog"}</p>
+        <h1 className="text-3xl font-extrabold">{t("catalog.title")}</h1>
+        <p className="mt-2 text-muted-foreground">
+          {data ? t("catalog.count", { n: data.total }) : t("catalog.browseHint")}
+        </p>
       </div>
 
       {/* Filters */}
@@ -47,31 +86,31 @@ export function CourseCatalog() {
           <Input
             value={search}
             onChange={(e) => resetPage(setSearch)(e.target.value)}
-            placeholder="Search courses…"
+            placeholder={t("catalog.searchPlaceholder")}
             className="pl-10"
           />
         </div>
         <Select value={category} onValueChange={resetPage(setCategory)}>
           <SelectTrigger className="sm:w-48">
-            <SelectValue placeholder="Category" />
+            <SelectValue placeholder={t("catalog.category")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="All">All categories</SelectItem>
+            <SelectItem value="All">{t("catalog.allCategories")}</SelectItem>
             {CATEGORIES.map((c) => (
               <SelectItem key={c} value={c}>
-                {c}
+                {t(`cat.${c.replace(/\s/g, "")}`)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <Select value={sort} onValueChange={(v) => resetPage(setSort)(v as CourseQuery["sort"])}>
           <SelectTrigger className="sm:w-52">
-            <SelectValue placeholder="Sort by" />
+            <SelectValue placeholder={t("catalog.sortBy")} />
           </SelectTrigger>
           <SelectContent>
             {SORT_OPTIONS.map((o) => (
               <SelectItem key={o.value} value={o.value}>
-                {o.label}
+                {t(`sort.${o.value}`)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -84,7 +123,7 @@ export function CourseCatalog() {
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
-        <EmptyState title="No courses found" description="Try adjusting your search or filters." />
+        <EmptyState title={t("states.noCoursesTitle")} description={t("states.noCoursesDesc")} />
       ) : (
         <>
           <div className={`grid gap-6 sm:grid-cols-2 lg:grid-cols-4 ${isFetching ? "opacity-60" : ""}`}>

@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   CheckCircle2,
   ChevronDown,
-  Circle,
   Download,
   FileText,
   PlayCircle,
@@ -16,13 +15,17 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Markdown } from "@/components/shared/markdown";
+import { VideoPlayer } from "@/components/shared/video-player";
 import { LoadingState } from "@/components/shared/states";
 import { coursesService } from "@/services/courses.service";
 import { ROUTES } from "@/constants";
 import { cn } from "@/lib/utils";
+import { useT } from "@/providers/locale-provider";
 
 export default function LearnPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const t = useT();
   const { data: course, isLoading } = useQuery({
     queryKey: ["learn", id],
     queryFn: () => coursesService.getById(id),
@@ -57,7 +60,7 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
             <div className="h-2 w-32 overflow-hidden rounded-full bg-slate-700">
               <div className="h-full bg-emerald-500" style={{ width: `${progress}%` }} />
             </div>
-            {progress}% complete
+            {t("learn.complete", { p: progress })}
           </div>
         </div>
       </header>
@@ -65,13 +68,14 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
       <div className="flex flex-col lg:flex-row">
         {/* Main */}
         <main className="min-w-0 flex-1">
-          {/* Video */}
-          <div className="relative grid aspect-video w-full place-items-center bg-black text-white">
-            <div className="text-center">
-              <PlayCircle className="mx-auto size-16 opacity-80" />
-              <p className="mt-2 text-sm text-slate-300">{activeLesson?.title}</p>
-            </div>
-          </div>
+          {/* Lesson content: video player or text article */}
+          {activeLesson?.type === "text" ? (
+            <article className="mx-auto max-w-3xl px-6 py-8">
+              <Markdown>{activeLesson.content ?? ""}</Markdown>
+            </article>
+          ) : (
+            <VideoPlayer src={activeLesson?.contentUrl} title={activeLesson?.title} />
+          )}
 
           {/* Lesson meta + tabs */}
           <div className="bg-background">
@@ -79,7 +83,7 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
               <div>
                 <h1 className="text-xl font-bold">{activeLesson?.title}</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Lesson {allLessons.findIndex((l) => l.id === activeLesson?.id) + 1} of {allLessons.length}
+                  {t("learn.lessonOf", { i: allLessons.findIndex((l) => l.id === activeLesson?.id) + 1, n: allLessons.length })}
                 </p>
               </div>
               <Button
@@ -88,17 +92,17 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
                 className="shrink-0 bg-emerald-600 hover:bg-emerald-700"
               >
                 <CheckCircle2 className="size-4" />
-                {activeLesson && isDone(activeLesson.id) ? "Completed" : "Mark complete"}
+                {activeLesson && isDone(activeLesson.id) ? t("learn.completed") : t("learn.markComplete")}
               </Button>
             </div>
 
             <div className="px-6 py-6">
               <Tabs defaultValue="overview">
                 <TabsList>
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="notes">Notes</TabsTrigger>
-                  <TabsTrigger value="resources">Resources</TabsTrigger>
-                  <TabsTrigger value="qa">Q&amp;A</TabsTrigger>
+                  <TabsTrigger value="overview">{t("learn.overview")}</TabsTrigger>
+                  <TabsTrigger value="notes">{t("learn.notes")}</TabsTrigger>
+                  <TabsTrigger value="resources">{t("learn.resources")}</TabsTrigger>
+                  <TabsTrigger value="qa">{t("learn.qa")}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview">
@@ -106,9 +110,9 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
                 </TabsContent>
 
                 <TabsContent value="notes">
-                  <Textarea placeholder="Add a note for this lesson…" rows={4} />
+                  <Textarea placeholder={t("learn.notePlaceholder")} rows={4} />
                   <Button className="mt-3" size="sm">
-                    Save note
+                    {t("learn.saveNote")}
                   </Button>
                 </TabsContent>
 
@@ -129,9 +133,9 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
                 </TabsContent>
 
                 <TabsContent value="qa">
-                  <Textarea placeholder="Ask a question about this lesson…" rows={3} />
+                  <Textarea placeholder={t("learn.askPlaceholder")} rows={3} />
                   <Button className="mt-3" size="sm">
-                    Post question
+                    {t("learn.postQuestion")}
                   </Button>
                 </TabsContent>
               </Tabs>
@@ -142,9 +146,9 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
         {/* Curriculum sidebar */}
         <aside className="w-full border-t bg-background lg:h-[calc(100vh-3.5rem)] lg:w-96 lg:overflow-y-auto lg:border-l lg:border-t-0">
           <div className="border-b p-4">
-            <h2 className="font-bold">Course content</h2>
+            <h2 className="font-bold">{t("learn.courseContent")}</h2>
             <p className="text-xs text-muted-foreground">
-              {totalDone} of {allLessons.length} lessons · {progress}% complete
+              {t("learn.contentMeta", { done: totalDone, total: allLessons.length, p: progress })}
             </p>
             <Progress value={progress} className="mt-2" />
           </div>
@@ -163,11 +167,11 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
                     )}
                   >
                     {done ? (
-                      <CheckCircle2 className="size-4 text-emerald-500" />
-                    ) : active ? (
-                      <PlayCircle className="size-4 text-primary" />
+                      <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
+                    ) : lesson.type === "text" ? (
+                      <FileText className={cn("size-4 shrink-0", active ? "text-primary" : "text-slate-400")} />
                     ) : (
-                      <Circle className="size-4 text-slate-300" />
+                      <PlayCircle className={cn("size-4 shrink-0", active ? "text-primary" : "text-slate-400")} />
                     )}
                     <span className="flex-1">{lesson.title}</span>
                   </button>
@@ -181,7 +185,7 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
                 href={ROUTES.quiz(course.id)}
                 className="flex items-center gap-3 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800 ring-1 ring-amber-200"
               >
-                📝 Take the section quiz →
+                {t("learn.takeQuiz")}
               </Link>
             </div>
           )}

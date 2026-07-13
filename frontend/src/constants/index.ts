@@ -1,18 +1,34 @@
 export const APP_NAME = "LearnHub";
 
+/** Public origin for canonical URLs, sitemap, and Open Graph metadata. */
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://learnhub.uz";
+
 export const ROUTES = {
   home: "/",
   courses: "/courses",
   course: (slug: string) => `/courses/${slug}`,
+  categories: "/categories",
+  category: (slug: string) => `/courses?category=${encodeURIComponent(slug)}`,
+  instructor: (id: number | string) => `/instructors/${id}`,
   login: "/login",
   register: "/register",
   forgotPassword: "/forgot-password",
+  resetPassword: "/reset-password",
+  // Commerce
+  cart: "/cart",
+  checkout: "/checkout",
+  checkoutSuccess: "/checkout/success",
+  wishlist: "/wishlist",
   // Learner area
   dashboard: "/dashboard",
+  myCourses: "/my-courses",
   learn: (id: number | string) => `/learn/${id}`,
   quiz: (id: number | string) => `/quiz/${id}`,
   certificates: "/certificates",
   profile: "/profile",
+  purchases: "/purchases",
+  notifications: "/notifications",
+  settings: "/settings",
   // Studio (any user can teach — no role gate)
   studio: "/studio",
   studioCourses: "/studio/courses",
@@ -24,6 +40,14 @@ export const ROUTES = {
   adminUsers: "/admin/users",
   adminCourses: "/admin/courses",
   adminCategories: "/admin/categories",
+  // Marketing & info
+  teach: "/teach",
+  about: "/about",
+  pricing: "/pricing",
+  help: "/help",
+  contact: "/contact",
+  terms: "/terms",
+  privacy: "/privacy",
 } as const;
 
 export const CATEGORIES = [

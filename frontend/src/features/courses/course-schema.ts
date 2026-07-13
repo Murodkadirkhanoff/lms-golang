@@ -1,13 +1,17 @@
 import { z } from "zod";
 
 // --- lessons table ---
-// title, content_url, duration_seconds, position (from order), price, is_free.
-// CHECK (is_free = false OR price = 0). Duration is collected in minutes in the
-// UI and converted to duration_seconds when submitting.
+// title, type, content_url | content, duration_seconds, position (from order),
+// price, is_free. CHECK (is_free = false OR price = 0). Duration is collected in
+// minutes in the UI and converted to duration_seconds when submitting.
+// A lesson is either a "video" (uploaded file at contentUrl) or a "text"
+// markdown article (content).
 export const lessonSchema = z
   .object({
     title: z.string().min(1, "Lesson title is required").max(200, "Max 200 characters"),
+    type: z.enum(["video", "text"]),
     contentUrl: z.string().optional(),
+    content: z.string().optional(),
     durationMinutes: z.number().min(0, "Must be 0 or more"),
     price: z.number().min(0, "Price cannot be negative"),
     isFree: z.boolean(),
@@ -15,6 +19,14 @@ export const lessonSchema = z
   .refine((l) => !l.isFree || l.price === 0, {
     message: "Free lessons must be priced 0",
     path: ["price"],
+  })
+  .refine((l) => l.type !== "video" || (l.contentUrl?.trim().length ?? 0) > 0, {
+    message: "Upload a video for this lesson",
+    path: ["contentUrl"],
+  })
+  .refine((l) => l.type !== "text" || (l.content?.trim().length ?? 0) > 0, {
+    message: "Text lessons need content",
+    path: ["content"],
   });
 
 // --- modules table ---

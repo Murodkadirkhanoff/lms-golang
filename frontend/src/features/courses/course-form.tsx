@@ -12,15 +12,25 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { coursesService } from "@/services/courses.service";
 import { categoriesService } from "@/services/categories.service";
 import { courseSchema, type CourseFormValues } from "./course-schema";
 import { LANGUAGES, ROUTES } from "@/constants";
-import { slugify } from "@/lib/utils";
+import { formatPrice, slugify } from "@/lib/utils";
+import { useT } from "@/providers/locale-provider";
 
 export function CourseForm() {
   const router = useRouter();
+  const t = useT();
   const [serverError, setServerError] = useState("");
 
   const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: categoriesService.list });
@@ -55,7 +65,9 @@ export function CourseForm() {
           title: m.title,
           lessons: m.lessons.map((l) => ({
             title: l.title,
-            contentUrl: l.contentUrl ?? "",
+            type: l.type,
+            contentUrl: l.type === "video" ? l.contentUrl ?? "" : "",
+            content: l.type === "text" ? l.content ?? "" : "",
             durationSeconds: Math.round((l.durationMinutes ?? 0) * 60),
             price: l.price,
             isFree: l.isFree,
@@ -74,50 +86,50 @@ export function CourseForm() {
 
   return (
     <FormProvider {...methods}>
-    <form className="grid max-w-5xl gap-6 lg:grid-cols-3">
-      <div className="space-y-6 lg:col-span-2">
+    <form className="mx-auto grid w-full max-w-5xl gap-6 lg:grid-cols-3">
+      <div className="min-w-0 space-y-6 lg:col-span-2">
         {serverError && <div className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{serverError}</div>}
 
         {/* Basic info */}
         <Card>
           <CardHeader>
-            <CardTitle>Basic information</CardTitle>
-            <CardDescription>This is what students see first.</CardDescription>
+            <CardTitle>{t("cf.basicInfo")}</CardTitle>
+            <CardDescription>{t("cf.basicInfoDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="space-y-1.5">
               <Label htmlFor="title">
-                Course title <span className="text-rose-500">*</span>
+                {t("cf.courseTitle")} <span className="text-rose-500">*</span>
               </Label>
-              <Input id="title" placeholder="e.g. Complete Next.js 16 Course" {...register("title")} />
+              <Input id="title" placeholder={t("cf.titlePlaceholder")} {...register("title")} />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{errors.title?.message ?? "Clear, specific titles convert best."}</span>
+                <span>{errors.title?.message ?? t("cf.titleHint")}</span>
                 <span>{title.length} / 200</span>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label>URL slug (auto-generated)</Label>
+              <Label>{t("cf.urlSlug")}</Label>
               <div className="flex items-center overflow-hidden rounded-lg border bg-secondary/50">
-                <span className="border-r bg-secondary px-3 py-2 text-sm text-muted-foreground">
+                <span className="shrink-0 border-r bg-secondary px-3 py-2 text-sm text-muted-foreground max-sm:text-xs">
                   learnhub.com/courses/
                 </span>
-                <span className="truncate px-3 py-2 text-sm text-muted-foreground">{slug || "your-course-title"}</span>
+                <span className="min-w-0 truncate px-3 py-2 text-sm text-muted-foreground">{slug || "your-course-title"}</span>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="description">Description</Label>
-              <Textarea id="description" rows={5} placeholder="What will students learn?" {...register("description")} />
+              <Label htmlFor="description">{t("cf.description")}</Label>
+              <Textarea id="description" rows={5} placeholder={t("cf.descPlaceholder")} {...register("description")} />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{errors.description?.message ?? "Optional — you can add this later."}</span>
+                <span>{errors.description?.message ?? t("cf.descHint")}</span>
                 <span>{description.length} / 5000</span>
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>Category</Label>
+                <Label>{t("cf.category")}</Label>
                 <Controller
                   control={control}
                   name="categoryId"
@@ -127,14 +139,25 @@ export function CourseForm() {
                       onValueChange={(v) => field.onChange(Number(v))}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
+                        <SelectValue placeholder={t("cf.selectCategory")} />
                       </SelectTrigger>
                       <SelectContent>
-                        {categories?.map((c) => (
-                          <SelectItem key={c.id} value={String(c.id)}>
-                            {c.nameEn}
-                          </SelectItem>
-                        ))}
+                        {(categories ?? [])
+                          .filter((c) => c.parentId == null)
+                          .map((parent) => {
+                            const children = (categories ?? []).filter((c) => c.parentId === parent.id);
+                            if (children.length === 0) return null;
+                            return (
+                              <SelectGroup key={parent.id}>
+                                <SelectLabel>{parent.nameEn}</SelectLabel>
+                                {children.map((child) => (
+                                  <SelectItem key={child.id} value={String(child.id)}>
+                                    {child.nameEn}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            );
+                          })}
                       </SelectContent>
                     </Select>
                   )}
@@ -144,7 +167,7 @@ export function CourseForm() {
 
               <div className="space-y-1.5">
                 <Label>
-                  Language <span className="text-rose-500">*</span>
+                  {t("cf.language")} <span className="text-rose-500">*</span>
                 </Label>
                 <Controller
                   control={control}
@@ -171,7 +194,7 @@ export function CourseForm() {
 
             <p className="flex items-center gap-2 rounded-lg bg-secondary/60 px-3 py-2 text-xs text-muted-foreground">
               <Info className="size-4 shrink-0" />
-              You are set as the instructor automatically — anyone can create courses, no separate role needed.
+              {t("cf.instructorNote")}
             </p>
           </CardContent>
         </Card>
@@ -182,41 +205,42 @@ export function CourseForm() {
         {/* Thumbnail */}
         <Card>
           <CardHeader>
-            <CardTitle>Course thumbnail</CardTitle>
-            <CardDescription>Recommended 1280×720 (16:9), max 2MB.</CardDescription>
+            <CardTitle>{t("cf.thumbnail")}</CardTitle>
+            <CardDescription>{t("cf.thumbnailDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid place-items-center rounded-xl border-2 border-dashed p-8 text-center">
               <ImagePlus className="size-8 text-muted-foreground" />
               <p className="mt-2 text-sm font-semibold">
-                Drag &amp; drop or <span className="text-primary">browse</span>
+                {t("cf.dragDrop")} <span className="text-primary">{t("cf.browse")}</span>
               </p>
-              <p className="text-xs text-muted-foreground">PNG, JPG up to 2MB</p>
+              <p className="text-xs text-muted-foreground">{t("cf.fileHint")}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Sidebar: pricing + publish */}
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Pricing</CardTitle>
+            <CardTitle>{t("cf.pricing")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="price">Price (USD)</Label>
+              <Label htmlFor="price">{t("cf.priceUzs")}</Label>
               <div className="flex items-center overflow-hidden rounded-lg border">
-                <span className="border-r bg-secondary px-3 py-2 text-muted-foreground">$</span>
                 <input
                   id="price"
                   type="number"
-                  step="0.01"
-                  className="flex-1 px-3 py-2 text-sm focus:outline-none"
+                  step="1000"
+                  min={0}
+                  className="w-full min-w-0 flex-1 px-3 py-2 text-sm focus:outline-none"
                   {...register("price", { valueAsNumber: true })}
                 />
+                <span className="shrink-0 border-l bg-secondary px-3 py-2 text-muted-foreground">{t("common.sum")}</span>
               </div>
-              <p className="text-xs text-muted-foreground">Set 0 to make this course free.</p>
+              <p className="text-xs text-muted-foreground">{t("cf.priceHint")}</p>
               {errors.price && <p className="text-xs text-destructive">{errors.price.message}</p>}
             </div>
           </CardContent>
@@ -224,12 +248,12 @@ export function CourseForm() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Publish</CardTitle>
-            <CardDescription>Drafts are only visible to you.</CardDescription>
+            <CardTitle>{t("cf.publish")}</CardTitle>
+            <CardDescription>{t("cf.publishDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <Button type="button" className="w-full" disabled={mutation.isPending} onClick={submit(true)}>
-              {mutation.isPending ? "Saving…" : "Publish course"}
+              {mutation.isPending ? t("cf.saving") : t("cf.publishCourse")}
             </Button>
             <Button
               type="button"
@@ -238,7 +262,7 @@ export function CourseForm() {
               disabled={mutation.isPending}
               onClick={submit(false)}
             >
-              Save as draft
+              {t("cf.saveDraft")}
             </Button>
           </CardContent>
         </Card>
@@ -247,9 +271,9 @@ export function CourseForm() {
         <Card className="overflow-hidden">
           <div className="aspect-video bg-gradient-to-br from-indigo-400 to-violet-500" />
           <CardContent className="p-4">
-            <h3 className="line-clamp-2 text-sm font-bold">{title || "Your course title"}</h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">by You</p>
-            <div className="mt-2 font-extrabold">{Number(price) > 0 ? `$${Number(price).toFixed(2)}` : "Free"}</div>
+            <h3 className="line-clamp-2 text-sm font-bold">{title || t("cf.yourTitle")}</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">{t("cf.byYou")}</p>
+            <div className="mt-2 font-extrabold">{Number(price) > 0 ? formatPrice(Number(price)) : t("common.free")}</div>
           </CardContent>
         </Card>
       </div>

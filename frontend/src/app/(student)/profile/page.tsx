@@ -4,15 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-const learningStats = [
-  { label: "Hours learned", value: "142h" },
-  { label: "Courses completed", value: "5" },
-  { label: "Current streak", value: "7 days" },
-  { label: "Quizzes passed", value: "23" },
-];
+import { useT } from "@/providers/locale-provider";
 
 export default function ProfilePage() {
+  const t = useT();
+  const learningStats = [
+    { label: t("profile.statHours"), value: "142h" },
+    { label: t("profile.statCourses"), value: "5" },
+    { label: t("profile.statStreak"), value: t("profile.streakValue") },
+    { label: t("profile.statQuizzes"), value: "23" },
+  ];
+
   return (
     <div className="max-w-3xl space-y-6">
       <div className="flex items-center gap-4">
@@ -25,24 +27,24 @@ export default function ProfilePage() {
 
       <Tabs defaultValue="info">
         <TabsList>
-          <TabsTrigger value="info">Personal info</TabsTrigger>
-          <TabsTrigger value="password">Password</TabsTrigger>
-          <TabsTrigger value="stats">Statistics</TabsTrigger>
+          <TabsTrigger value="info">{t("profile.tabInfo")}</TabsTrigger>
+          <TabsTrigger value="password">{t("profile.tabPassword")}</TabsTrigger>
+          <TabsTrigger value="stats">{t("profile.tabStats")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info">
           <Card>
             <CardHeader>
-              <CardTitle>Personal information</CardTitle>
-              <CardDescription>Update your account details.</CardDescription>
+              <CardTitle>{t("profile.infoTitle")}</CardTitle>
+              <CardDescription>{t("profile.infoDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                <FormField label="Full name" defaultValue="Amir Karimov" />
-                <FormField label="Email" type="email" defaultValue="amir@mail.com" />
+                <FormField label={t("profile.fullName")} defaultValue="Amir Karimov" />
+                <FormField label={t("profile.email")} type="email" defaultValue="amir@mail.com" />
               </div>
-              <FormField label="Headline" defaultValue="Lifelong learner" />
-              <Button>Save changes</Button>
+              <FormField label={t("profile.headline")} defaultValue="Lifelong learner" />
+              <Button>{t("common.saveChanges")}</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -50,14 +52,14 @@ export default function ProfilePage() {
         <TabsContent value="password">
           <Card>
             <CardHeader>
-              <CardTitle>Change password</CardTitle>
-              <CardDescription>Use a strong, unique password.</CardDescription>
+              <CardTitle>{t("profile.passTitle")}</CardTitle>
+              <CardDescription>{t("profile.passDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <FormField label="Current password" type="password" />
-              <FormField label="New password" type="password" />
-              <FormField label="Confirm new password" type="password" />
-              <Button>Update password</Button>
+              <FormField label={t("profile.currentPass")} type="password" />
+              <FormField label={t("profile.newPass")} type="password" />
+              <FormField label={t("profile.confirmPass")} type="password" />
+              <Button>{t("profile.updatePass")}</Button>
             </CardContent>
           </Card>
         </TabsContent>

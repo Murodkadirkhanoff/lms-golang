@@ -1,52 +1,54 @@
+"use client";
+
 import Link from "next/link";
 import { Logo } from "./logo";
 import { ROUTES } from "@/constants";
+import { useT } from "@/providers/locale-provider";
 
 const groups = [
   {
-    title: "Platform",
+    titleKey: "footer.platform",
     links: [
-      { label: "Courses", href: ROUTES.courses },
-      { label: "Teach", href: ROUTES.studio },
-      { label: "My Learning", href: ROUTES.dashboard },
+      { key: "footer.courses", href: ROUTES.courses },
+      { key: "footer.categories", href: ROUTES.categories },
+      { key: "footer.teach", href: ROUTES.teach },
+      { key: "footer.pricing", href: ROUTES.pricing },
     ],
   },
   {
-    title: "Company",
+    titleKey: "footer.company",
     links: [
-      { label: "About", href: "#" },
-      { label: "Careers", href: "#" },
-      { label: "Blog", href: "#" },
+      { key: "footer.about", href: ROUTES.about },
+      { key: "footer.help", href: ROUTES.help },
+      { key: "footer.contact", href: ROUTES.contact },
     ],
   },
   {
-    title: "Legal",
+    titleKey: "footer.legal",
     links: [
-      { label: "Privacy", href: "#" },
-      { label: "Terms", href: "#" },
-      { label: "Contact", href: "#" },
+      { key: "footer.privacy", href: ROUTES.privacy },
+      { key: "footer.terms", href: ROUTES.terms },
     ],
   },
 ];
 
 export function Footer() {
+  const t = useT();
   return (
     <footer className="border-t">
       <div className="mx-auto grid max-w-7xl gap-8 px-6 py-14 md:grid-cols-5">
         <div className="md:col-span-2">
           <Logo />
-          <p className="mt-4 max-w-xs text-sm text-muted-foreground">
-            The modern platform to learn, teach and grow. Built for the next generation of learners.
-          </p>
+          <p className="mt-4 max-w-xs text-sm text-muted-foreground">{t("footer.blurb")}</p>
         </div>
         {groups.map((group) => (
-          <div key={group.title}>
-            <h4 className="text-sm font-semibold">{group.title}</h4>
+          <div key={group.titleKey}>
+            <h4 className="text-sm font-semibold">{t(group.titleKey)}</h4>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               {group.links.map((link) => (
-                <li key={link.label}>
+                <li key={link.key}>
                   <Link href={link.href} className="hover:text-foreground">
-                    {link.label}
+                    {t(link.key)}
                   </Link>
                 </li>
               ))}
@@ -54,9 +56,7 @@ export function Footer() {
           </div>
         ))}
       </div>
-      <div className="border-t py-6 text-center text-sm text-muted-foreground">
-        © 2026 LearnHub. All rights reserved.
-      </div>
+      <div className="border-t py-6 text-center text-sm text-muted-foreground">{t("footer.rights")}</div>
     </footer>
   );
 }

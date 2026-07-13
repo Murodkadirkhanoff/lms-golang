@@ -1,18 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { Award, LayoutDashboard, GraduationCap, User } from "lucide-react";
+import { Award, Bell, GraduationCap, Heart, LayoutDashboard, Receipt, Settings, User } from "lucide-react";
 import { SidebarLayout, type SidebarItem } from "@/components/shared/sidebar-layout";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ROUTES } from "@/constants";
-
-const items: SidebarItem[] = [
-  { href: ROUTES.dashboard, label: "Dashboard", icon: LayoutDashboard },
-  { href: ROUTES.certificates, label: "Certificates", icon: Award },
-  { href: ROUTES.profile, label: "Profile", icon: User },
-];
+import { useT } from "@/providers/locale-provider";
+import { useAuth, initials } from "@/providers/auth-provider";
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
+  const t = useT();
+  const { user } = useAuth();
+  const items: SidebarItem[] = [
+    { href: ROUTES.dashboard, label: t("nav.dashboard"), icon: LayoutDashboard },
+    { href: ROUTES.myCourses, label: t("nav.myCourses"), icon: GraduationCap },
+    { href: ROUTES.wishlist, label: t("nav.wishlist"), icon: Heart },
+    { href: ROUTES.certificates, label: t("nav.certificates"), icon: Award },
+    { href: ROUTES.purchases, label: t("nav.purchases"), icon: Receipt },
+    { href: ROUTES.notifications, label: t("notif.title"), icon: Bell },
+    { href: ROUTES.profile, label: t("nav.profile"), icon: User },
+    { href: ROUTES.settings, label: t("nav.settings"), icon: Settings },
+  ];
+
   return (
     <SidebarLayout
       items={items}
@@ -20,14 +30,18 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         <>
           <Button asChild variant="ghost" size="sm">
             <Link href={ROUTES.courses}>
-              <GraduationCap className="size-4" /> Browse courses
+              <GraduationCap className="size-4" /> {t("student.browseCourses")}
             </Link>
           </Button>
           <div className="flex items-center gap-2">
-            <div className="size-9 rounded-full bg-indigo-200" />
+            <Avatar className="size-9 bg-indigo-200">
+              <AvatarFallback className="bg-indigo-200 text-indigo-700">
+                {user ? initials(user.name) : "?"}
+              </AvatarFallback>
+            </Avatar>
             <div className="hidden text-sm sm:block">
-              <div className="font-semibold">Amir K.</div>
-              <div className="text-xs text-muted-foreground">Learner</div>
+              <div className="font-semibold">{user?.name ?? "Guest"}</div>
+              <div className="text-xs text-muted-foreground">{t("student.learner")}</div>
             </div>
           </div>
         </>

@@ -4,23 +4,25 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { coursesService } from "@/services/courses.service";
 import { formatNumber, formatPrice } from "@/lib/utils";
-
-const kpis = [
-  { label: "Total revenue", value: "$48,250", trend: "▲ 12.5% vs last month", trendColor: "text-emerald-600" },
-  { label: "Total students", value: "12,840", trend: "▲ 320 new this week", trendColor: "text-emerald-600" },
-  { label: "Published courses", value: "14", trend: "2 in draft", trendColor: "text-muted-foreground" },
-  { label: "Avg. rating", value: "4.8 ★", trend: "from 9,200 reviews", trendColor: "text-muted-foreground" },
-];
+import { useT } from "@/providers/locale-provider";
 
 const revenueBars = [45, 60, 52, 78, 68, 100];
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
 
 export default function StudioDashboardPage() {
+  const t = useT();
   const { data: top } = useQuery({ queryKey: ["studio", "top"], queryFn: () => coursesService.getPopular(4) });
+
+  const kpis = [
+    { label: t("studio.totalRevenue"), value: "$48,250", trend: t("studio.revVsMonth"), trendColor: "text-emerald-600" },
+    { label: t("studio.totalStudents"), value: "12,840", trend: t("studio.newThisWeek"), trendColor: "text-emerald-600" },
+    { label: t("studio.publishedCourses"), value: "14", trend: t("studio.inDraft"), trendColor: "text-muted-foreground" },
+    { label: t("studio.avgRating"), value: "4.8 ★", trend: t("studio.fromReviews"), trendColor: "text-muted-foreground" },
+  ];
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-extrabold">Dashboard</h1>
+      <h1 className="text-2xl font-extrabold">{t("studio.dashboard")}</h1>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((k) => (
@@ -34,7 +36,7 @@ export default function StudioDashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="p-6 lg:col-span-2">
-          <h2 className="mb-6 text-lg font-bold">Revenue overview</h2>
+          <h2 className="mb-6 text-lg font-bold">{t("studio.revenueOverview")}</h2>
           <div className="flex h-52 items-end justify-between gap-3">
             {revenueBars.map((h, i) => (
               <div key={i} className="flex flex-1 flex-col items-center gap-2">
@@ -46,14 +48,14 @@ export default function StudioDashboardPage() {
         </Card>
 
         <Card className="p-6">
-          <h2 className="mb-4 text-lg font-bold">Top courses</h2>
+          <h2 className="mb-4 text-lg font-bold">{t("studio.topCourses")}</h2>
           <div className="space-y-4">
             {top?.map((c) => (
               <div key={c.id} className="flex items-center gap-3">
                 <div className={`size-10 rounded-lg bg-gradient-to-br ${c.thumbnailColor}`} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-semibold">{c.title}</div>
-                  <div className="text-xs text-muted-foreground">{formatNumber(c.studentCount)} students</div>
+                  <div className="text-xs text-muted-foreground">{t("studio.studentsCount", { n: formatNumber(c.studentCount) })}</div>
                 </div>
                 <span className="text-sm font-bold">{formatPrice(c.price)}</span>
               </div>

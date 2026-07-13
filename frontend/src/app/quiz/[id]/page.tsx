@@ -11,6 +11,7 @@ import { LoadingState } from "@/components/shared/states";
 import { quizService } from "@/services/quiz.service";
 import { ROUTES } from "@/constants";
 import { cn } from "@/lib/utils";
+import { useT } from "@/providers/locale-provider";
 
 const history = [
   { date: "Jun 14, 2026", score: 80 },
@@ -19,6 +20,7 @@ const history = [
 
 export default function QuizPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const t = useT();
   const { data: quiz, isLoading } = useQuery({ queryKey: ["quiz", id], queryFn: () => quizService.getById(id) });
 
   const [started, setStarted] = useState(false);
@@ -61,7 +63,7 @@ export default function QuizPage({ params }: { params: Promise<{ id: string }> }
     <div className="min-h-screen bg-secondary/30">
       <header className="flex h-14 items-center justify-between bg-slate-900 px-4 text-white">
         <Link href={ROUTES.dashboard} className="flex items-center gap-2 text-sm text-slate-300 hover:text-white">
-          <ArrowLeft className="size-5" /> Exit quiz
+          <ArrowLeft className="size-5" /> {t("quiz.exit")}
         </Link>
         {started && !submitted && (
           <div className="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-sm font-semibold">
@@ -77,15 +79,15 @@ export default function QuizPage({ params }: { params: Promise<{ id: string }> }
             <CardHeader>
               <CardTitle className="text-2xl">{quiz.title}</CardTitle>
               <CardDescription>
-                {quiz.questions.length} questions · {quiz.timeLimitMinutes} min · pass at {quiz.passingScore}%
+                {t("quiz.meta", { n: quiz.questions.length, min: quiz.timeLimitMinutes, pass: quiz.passingScore })}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <Button size="lg" onClick={() => setStarted(true)}>
-                Start quiz
+                {t("quiz.start")}
               </Button>
               <div>
-                <h3 className="mb-2 text-sm font-semibold">Score history</h3>
+                <h3 className="mb-2 text-sm font-semibold">{t("quiz.scoreHistory")}</h3>
                 <div className="space-y-2">
                   {history.map((h) => (
                     <div key={h.date} className="flex items-center justify-between rounded-lg bg-secondary/60 px-3 py-2 text-sm">
@@ -107,7 +109,7 @@ export default function QuizPage({ params }: { params: Promise<{ id: string }> }
             <CardHeader>
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>
-                  Question {current + 1} of {quiz.questions.length}
+                  {t("quiz.questionOf", { i: current + 1, n: quiz.questions.length })}
                 </span>
               </div>
               <Progress value={((current + 1) / quiz.questions.length) * 100} className="mt-2" />
@@ -140,12 +142,12 @@ export default function QuizPage({ params }: { params: Promise<{ id: string }> }
 
               <div className="flex justify-between pt-4">
                 <Button variant="outline" disabled={current === 0} onClick={() => setCurrent((c) => c - 1)}>
-                  Previous
+                  {t("quiz.previous")}
                 </Button>
                 {current < quiz.questions.length - 1 ? (
-                  <Button onClick={() => setCurrent((c) => c + 1)}>Next</Button>
+                  <Button onClick={() => setCurrent((c) => c + 1)}>{t("quiz.next")}</Button>
                 ) : (
-                  <Button onClick={() => setSubmitted(true)}>Submit</Button>
+                  <Button onClick={() => setSubmitted(true)}>{t("quiz.submit")}</Button>
                 )}
               </div>
             </CardContent>
@@ -164,17 +166,16 @@ export default function QuizPage({ params }: { params: Promise<{ id: string }> }
               >
                 {passed ? <CheckCircle2 className="size-8" /> : <XCircle className="size-8" />}
               </div>
-              <h2 className="text-2xl font-extrabold">{passed ? "Congratulations! 🎉" : "Keep practicing"}</h2>
+              <h2 className="text-2xl font-extrabold">{passed ? t("quiz.congrats") : t("quiz.keepPracticing")}</h2>
               <p className="text-muted-foreground">
-                You scored <span className="font-bold text-foreground">{score}%</span> ({passed ? "passed" : "failed"} — need{" "}
-                {quiz.passingScore}%)
+                {t("quiz.scored", { score, result: passed ? t("quiz.passed") : t("quiz.failed"), pass: quiz.passingScore })}
               </p>
               <div className="flex justify-center gap-3 pt-2">
                 <Button variant="outline" onClick={reset}>
-                  <RotateCcw className="size-4" /> Retake
+                  <RotateCcw className="size-4" /> {t("quiz.retake")}
                 </Button>
                 <Button asChild>
-                  <Link href={ROUTES.dashboard}>Back to dashboard</Link>
+                  <Link href={ROUTES.dashboard}>{t("quiz.backToDashboard")}</Link>
                 </Button>
               </div>
             </CardContent>

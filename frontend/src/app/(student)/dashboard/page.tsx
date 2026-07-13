@@ -10,24 +10,26 @@ import { LoadingState, ErrorState } from "@/components/shared/states";
 import { dashboardService } from "@/services/dashboard.service";
 import { ROUTES } from "@/constants";
 import { formatDate } from "@/lib/utils";
+import { useT } from "@/providers/locale-provider";
 
 export default function DashboardPage() {
+  const t = useT();
   const stats = useQuery({ queryKey: ["dashboard", "stats"], queryFn: dashboardService.getStats });
   const enrolled = useQuery({ queryKey: ["dashboard", "enrolled"], queryFn: dashboardService.getEnrolled });
   const certs = useQuery({ queryKey: ["dashboard", "certs"], queryFn: dashboardService.getCertificates });
 
   const statCards = [
-    { label: "Enrolled", value: stats.data?.enrolled, icon: BookOpen, color: "text-primary" },
-    { label: "In progress", value: stats.data?.inProgress, icon: Clock, color: "text-amber-600" },
-    { label: "Completed", value: stats.data?.completed, icon: CheckCircle2, color: "text-emerald-600" },
-    { label: "Certificates", value: stats.data?.certificates, icon: Award, color: "text-rose-600" },
+    { label: t("dash.enrolled"), value: stats.data?.enrolled, icon: BookOpen, color: "text-primary" },
+    { label: t("dash.inProgress"), value: stats.data?.inProgress, icon: Clock, color: "text-amber-600" },
+    { label: t("dash.completed"), value: stats.data?.completed, icon: CheckCircle2, color: "text-emerald-600" },
+    { label: t("dash.certificates"), value: stats.data?.certificates, icon: Award, color: "text-rose-600" },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold">Welcome back, Amir 👋</h1>
-        <p className="text-muted-foreground">You&apos;re on a 7-day streak. Keep it up!</p>
+        <h1 className="text-2xl font-extrabold">{t("dash.welcome")}</h1>
+        <p className="text-muted-foreground">{t("dash.streak")}</p>
       </div>
 
       {/* Stats */}
@@ -46,7 +48,7 @@ export default function DashboardPage() {
       {/* Continue learning */}
       <Card className="p-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold">Continue learning</h2>
+          <h2 className="text-lg font-bold">{t("dash.continueLearning")}</h2>
         </div>
         {enrolled.isLoading ? (
           <LoadingState />
@@ -60,12 +62,12 @@ export default function DashboardPage() {
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate font-semibold">{e.course.title}</h3>
                   <p className="text-xs text-muted-foreground">
-                    {e.lessonsCompleted} / {e.course.totalLessons} lessons · {e.currentLesson}
+                    {t("dash.lessonsProgress", { done: e.lessonsCompleted, total: e.course.totalLessons, lesson: e.currentLesson })}
                   </p>
                   <Progress value={e.progress} className="mt-2" />
                 </div>
                 <Button asChild className="shrink-0">
-                  <Link href={ROUTES.learn(e.course.id)}>Resume</Link>
+                  <Link href={ROUTES.learn(e.course.id)}>{t("dash.resume")}</Link>
                 </Button>
               </div>
             ))}
@@ -75,7 +77,7 @@ export default function DashboardPage() {
 
       {/* Recent certificates */}
       <Card className="p-6">
-        <h2 className="mb-4 text-lg font-bold">Recent certificates</h2>
+        <h2 className="mb-4 text-lg font-bold">{t("dash.recentCerts")}</h2>
         {certs.isLoading ? (
           <LoadingState />
         ) : (
@@ -85,7 +87,7 @@ export default function DashboardPage() {
                 <Award className="size-6 text-amber-700" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-semibold">{c.courseTitle}</div>
-                  <div className="text-xs text-muted-foreground">Issued {formatDate(c.issuedAt)}</div>
+                  <div className="text-xs text-muted-foreground">{t("dash.issued", { date: formatDate(c.issuedAt) })}</div>
                 </div>
               </div>
             ))}

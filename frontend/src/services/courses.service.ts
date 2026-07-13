@@ -5,9 +5,12 @@ import { courses } from "./mock/data";
 const delay = (ms = 400) => new Promise((r) => setTimeout(r, ms));
 
 // Mirrors the `lessons` table (duration in seconds; position from order).
+// type "video" uses contentUrl; type "text" uses content (markdown).
 export interface CreateLessonInput {
   title: string;
+  type: "video" | "text";
   contentUrl: string;
+  content: string;
   durationSeconds: number;
   price: number;
   isFree: boolean;
@@ -91,6 +94,26 @@ export const coursesService = {
     return data.course;
   },
 
+  async getByIds(ids: number[]): Promise<Course[]> {
+    if (USE_MOCK) {
+      await delay(200);
+      return ids
+        .map((id) => courses.find((c) => c.id === id))
+        .filter((c): c is Course => Boolean(c));
+    }
+    const { data } = await api.get("/courses", { params: { ids: ids.join(",") } });
+    return data.items;
+  },
+
+  async getByInstructor(instructorId: number): Promise<Course[]> {
+    if (USE_MOCK) {
+      await delay(300);
+      return courses.filter((c) => c.instructor.id === instructorId);
+    }
+    const { data } = await api.get("/courses", { params: { instructorId } });
+    return data.items;
+  },
+
   async getPopular(limit = 4): Promise<Course[]> {
     if (USE_MOCK) {
       await delay(300);
@@ -129,7 +152,9 @@ export const coursesService = {
         position: mi,
         lessons: m.lessons.map((l, li) => ({
           title: l.title,
+          type: l.type,
           content_url: l.contentUrl,
+          content: l.content,
           duration_seconds: l.durationSeconds,
           position: li,
           price: l.price,

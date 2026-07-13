@@ -28,12 +28,21 @@ export interface Instructor {
   rating: number;
 }
 
+export type LessonType = "video" | "text";
+
 export interface Lesson {
   id: number;
   title: string;
+  // "video": streamed/uploaded video at contentUrl.
+  // "text": markdown article stored in `content`.
+  type: LessonType;
   durationSeconds: number;
   isFree: boolean;
-  contentUrl?: string;
+  // Per-lesson price. 0 when the lesson is free or only sold as part of the
+  // course. Mirrors the `lessons.price` column; free lessons enforce price 0.
+  price: number;
+  contentUrl?: string; // video lessons
+  content?: string; // text lessons (markdown)
   completed?: boolean;
 }
 
@@ -115,4 +124,47 @@ export interface CourseQuery {
   sort?: "popular" | "newest" | "price-asc" | "price-desc";
   page?: number;
   pageSize?: number;
+}
+
+export interface CartItem {
+  courseId: number;
+  addedAt: string;
+}
+
+export type OrderStatus = "completed" | "refunded" | "pending";
+
+export interface OrderItem {
+  courseTitle: string;
+  instructor: string;
+  thumbnailColor: string;
+  price: number;
+}
+
+export interface Order {
+  id: string;
+  date: string;
+  status: OrderStatus;
+  paymentMethod: string;
+  items: OrderItem[];
+  total: number;
+}
+
+export type NotificationType = "course" | "message" | "promo" | "system";
+
+export interface Notification {
+  id: number;
+  type: NotificationType;
+  title: string;
+  body: string;
+  createdAt: string;
+  read: boolean;
+}
+
+export interface CategoryNode {
+  slug: string;
+  name: string;
+  icon: string; // lucide icon name handled by the page
+  color: string;
+  courseCount: number;
+  description: string;
 }

@@ -19,8 +19,23 @@ export interface AuthResult {
   token: string;
 }
 
+const USER_KEY = "user";
+
 function persist(result: AuthResult) {
-  if (typeof window !== "undefined") localStorage.setItem("token", result.token);
+  if (typeof window === "undefined") return;
+  localStorage.setItem("token", result.token);
+  localStorage.setItem(USER_KEY, JSON.stringify(result.user));
+}
+
+/** The signed-in user cached client-side, or null when logged out. */
+export function getStoredUser(): User | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? (JSON.parse(raw) as User) : null;
+  } catch {
+    return null;
+  }
 }
 
 export const authService = {
@@ -62,7 +77,18 @@ export const authService = {
     return data;
   },
 
+  async resetPassword(password: string, token?: string): Promise<{ message: string }> {
+    if (USE_MOCK) {
+      await delay();
+      return { message: "Your password has been reset" };
+    }
+    const { data } = await api.put("/users/password", { password, token });
+    return data;
+  },
+
   logout() {
-    if (typeof window !== "undefined") localStorage.removeItem("token");
+    if (typeof window === "undefined") return;
+    localStorage.removeItem("token");
+    localStorage.removeItem(USER_KEY);
   },
 };
