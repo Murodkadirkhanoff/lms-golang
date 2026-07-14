@@ -225,6 +225,21 @@ func (app *application) updateCourseHandler(w http.ResponseWriter, r *http.Reque
 		Lang        *string  `json:"lang"`
 		Price       *float64 `json:"price"`
 		IsPublished *bool    `json:"is_published"`
+		// nil — o'quv rejasiga tegilmaydi; berilsa butunlay almashtiriladi.
+		Modules *[]struct {
+			Title    string `json:"title"`
+			Position int    `json:"position"`
+			Lessons  []struct {
+				Title           string  `json:"title"`
+				Type            string  `json:"type"`
+				ContentURL      string  `json:"content_url"`
+				Content         string  `json:"content"`
+				DurationSeconds int     `json:"duration_seconds"`
+				Position        int     `json:"position"`
+				Price           float64 `json:"price"`
+				IsFree          bool    `json:"is_free"`
+			} `json:"lessons"`
+		} `json:"modules"`
 	}
 
 	err = jsonutil.ReadJSON(w, r, &input)
@@ -252,6 +267,32 @@ func (app *application) updateCourseHandler(w http.ResponseWriter, r *http.Reque
 		course.IsPublished = *input.IsPublished
 	}
 
+	var newModules []*data.Module
+	if input.Modules != nil {
+		newModules = []*data.Module{}
+		for _, m := range *input.Modules {
+			module := &data.Module{Title: m.Title, Position: m.Position}
+			for _, l := range m.Lessons {
+				lessonType := l.Type
+				if lessonType == "" {
+					lessonType = "video"
+				}
+				module.Lessons = append(module.Lessons, &data.Lesson{
+					Title:           l.Title,
+					Type:            lessonType,
+					ContentURL:      l.ContentURL,
+					Content:         l.Content,
+					DurationSeconds: l.DurationSeconds,
+					Position:        l.Position,
+					Price:           l.Price,
+					IsFree:          l.IsFree,
+				})
+			}
+			newModules = append(newModules, module)
+		}
+		course.Modules = newModules
+	}
+
 	v := validator.New()
 
 	if data.ValidateCourse(v, course); !v.Valid() {
@@ -270,6 +311,21 @@ func (app *application) updateCourseHandler(w http.ResponseWriter, r *http.Reque
 		default:
 			app.ServerError(w, r, err)
 		}
+		return
+	}
+
+	if newModules != nil {
+		err = app.models.Courses.ReplaceModules(course.ID, newModules)
+		if err != nil {
+			app.ServerError(w, r, err)
+			return
+		}
+	}
+
+	// To'liq yangilangan holatni qaytaramiz (modules + aggregatlar bilan).
+	course, err = app.models.Courses.GetByIDOrSlug(strconv.FormatInt(course.ID, 10))
+	if err != nil {
+		app.ServerError(w, r, err)
 		return
 	}
 

@@ -51,7 +51,7 @@ type Course struct {
 	Title                string      `json:"title"`
 	Description          string      `json:"description"`
 	ThumbnailColor       string      `json:"thumbnailColor"`
-	CategoryID           *int64      `json:"-"`
+	CategoryID           *int64      `json:"categoryId"`
 	Category             string      `json:"category"`
 	Lang                 string      `json:"lang"`
 	Price                float64     `json:"price"`
@@ -438,6 +438,47 @@ func (m CourseModel) Update(course *Course) error {
 	}
 
 	return nil
+}
+
+// ReplaceModules kurs o'quv rejasini butunlay almashtiradi (tahrirlash).
+// Eski darslar o'chib yangi id'lar beriladi — sotib olganlarga kirish
+// grantCourseAccess enrollment tomonida qayta so'ralganda tiklanadi.
+func (m CourseModel) ReplaceModules(courseID int64, modules []*Module) error {
+	tx, err := m.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec(`DELETE FROM modules WHERE course_id = $1`, courseID)
+	if err != nil {
+		return err
+	}
+
+	for _, module := range modules {
+		err = tx.QueryRow(
+			`INSERT INTO modules (course_id, title, position) VALUES ($1, $2, $3) RETURNING id`,
+			courseID, module.Title, module.Position,
+		).Scan(&module.ID)
+		if err != nil {
+			return err
+		}
+
+		for _, lesson := range module.Lessons {
+			err = tx.QueryRow(
+				`INSERT INTO lessons (module_id, title, type, content_url, content, duration_seconds, position, price, is_free)
+				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+				 RETURNING id`,
+				module.ID, lesson.Title, lesson.Type, lesson.ContentURL, lesson.Content,
+				lesson.DurationSeconds, lesson.Position, lesson.Price, lesson.IsFree,
+			).Scan(&lesson.ID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return tx.Commit()
 }
 
 // Delete soft-delete qiladi (enrollments boshqa servisda bo'lgani uchun
