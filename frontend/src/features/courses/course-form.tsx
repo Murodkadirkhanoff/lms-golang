@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,12 +28,19 @@ import { LANGUAGES, ROUTES } from "@/constants";
 import { formatPrice, slugify } from "@/lib/utils";
 import { useT } from "@/providers/locale-provider";
 
-export function CourseForm() {
+export function CourseForm({ courseId }: { courseId?: number }) {
   const router = useRouter();
   const t = useT();
   const [serverError, setServerError] = useState("");
+  const isEdit = courseId != null;
 
   const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: categoriesService.list });
+
+  const { data: course, isLoading: courseLoading } = useQuery({
+    queryKey: ["course", courseId],
+    queryFn: () => coursesService.getById(courseId!),
+    enabled: isEdit,
+  });
 
   const methods = useForm<CourseFormValues>({
     resolver: zodResolver(courseSchema),
@@ -44,8 +51,33 @@ export function CourseForm() {
     handleSubmit,
     control,
     watch,
+    reset,
     formState: { errors },
   } = methods;
+
+  useEffect(() => {
+    if (!course) return;
+    reset({
+      title: course.title,
+      description: course.description ?? "",
+      categoryId: course.categoryId ?? null,
+      lang: course.lang,
+      price: course.price,
+      isPublished: course.isPublished,
+      modules: (course.modules ?? []).map((m) => ({
+        title: m.title,
+        lessons: m.lessons.map((l) => ({
+          title: l.title,
+          type: l.type,
+          contentUrl: l.contentUrl ?? "",
+          content: l.content ?? "",
+          durationMinutes: Math.round(l.durationSeconds / 60),
+          price: l.price,
+          isFree: l.isFree,
+        })),
+      })),
+    });
+  }, [course, reset]);
 
   const title = watch("title") ?? "";
   const description = watch("description") ?? "";
@@ -53,8 +85,8 @@ export function CourseForm() {
   const slug = slugify(title);
 
   const mutation = useMutation({
-    mutationFn: (values: CourseFormValues) =>
-      coursesService.create({
+    mutationFn: (values: CourseFormValues) => {
+      const input = {
         title: values.title,
         description: values.description ?? "",
         categoryId: values.categoryId,
@@ -73,9 +105,11 @@ export function CourseForm() {
             isFree: l.isFree,
           })),
         })),
-      }),
+      };
+      return isEdit ? coursesService.update(courseId, input) : coursesService.create(input);
+    },
     onSuccess: () => router.push(ROUTES.studioCourses),
-    onError: (err) => setServerError(err instanceof Error ? err.message : "Failed to create course"),
+    onError: (err) => setServerError(err instanceof Error ? err.message : "Failed to save course"),
   });
 
   const submit = (publish: boolean) =>
@@ -83,6 +117,14 @@ export function CourseForm() {
       setServerError("");
       mutation.mutate({ ...values, isPublished: publish });
     });
+
+  if (isEdit && courseLoading) {
+    return (
+      <div className="mx-auto grid w-full max-w-5xl place-items-center rounded-xl border border-dashed p-16 text-sm text-muted-foreground">
+        {t("common.loading")}
+      </div>
+    );
+  }
 
   return (
     <FormProvider {...methods}>

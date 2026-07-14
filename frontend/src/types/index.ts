@@ -18,6 +18,8 @@ export interface Category {
   nameUz: string;
   nameRu: string;
   parentId?: number | null;
+  // Published kurslar soni (ota kategoriyada bolalarniki bilan birga).
+  courseCount?: number;
 }
 
 export interface Instructor {
@@ -69,6 +71,7 @@ export interface Course {
   title: string;
   description: string;
   thumbnailColor: string;
+  categoryId?: number | null;
   category: string;
   lang: Lang;
   price: number;
@@ -85,10 +88,13 @@ export interface Course {
 }
 
 export interface EnrolledCourse {
+  // Progress yozish uchun (PATCH /enrollments/{id}/progress). Mock rejimda 0.
+  enrollmentId: number;
   course: Course;
   progress: number; // 0-100
   currentLesson: string;
   lessonsCompleted: number;
+  completedLessonIds?: number[];
 }
 
 export interface Certificate {
@@ -111,6 +117,26 @@ export interface Quiz {
   passingScore: number;
   timeLimitMinutes: number;
   questions: QuizQuestion[];
+}
+
+export interface QuizAttempt {
+  id: number;
+  createdAt: string;
+  score: number;
+}
+
+// GET /me/teaching/stats javobi — studio dashboard va analytics.
+export interface TeachingStats {
+  totalRevenue: number;
+  monthlyRevenue: { month: string; revenue: number }[]; // month: "YYYY-MM"
+  totalStudents: number;
+  activeStudents: number;
+  publishedCourses: number;
+  draftCourses: number;
+  avgRating: number;
+  avgCompletion: number; // 0-100
+  avgQuizScore: number; // 0-100
+  engagement: { courseId: number; title: string; students: number; completion: number }[];
 }
 
 export interface Paginated<T> {

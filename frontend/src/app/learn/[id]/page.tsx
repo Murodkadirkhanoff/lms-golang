@@ -1,8 +1,8 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -19,21 +19,57 @@ import { Markdown } from "@/components/shared/markdown";
 import { VideoPlayer } from "@/components/shared/video-player";
 import { LoadingState } from "@/components/shared/states";
 import { coursesService } from "@/services/courses.service";
+import { dashboardService } from "@/services/dashboard.service";
+import { enrollmentsService } from "@/services/enrollments.service";
 import { ROUTES } from "@/constants";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/providers/auth-provider";
 import { useT } from "@/providers/locale-provider";
 
 export default function LearnPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const t = useT();
+  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
   const { data: course, isLoading } = useQuery({
     queryKey: ["learn", id],
     queryFn: () => coursesService.getById(id),
   });
 
+  // Enrollment yozuvi progress saqlash uchun kerak (PATCH /enrollments/{id}/progress).
+  const { data: enrolled } = useQuery({
+    queryKey: ["dashboard", "enrolled"],
+    queryFn: dashboardService.getEnrolled,
+    enabled: isAuthenticated,
+  });
+  const enrollment = enrolled?.find((e) => e.course.id === Number(id));
+
   const allLessons = useMemo(() => (course?.modules ?? []).flatMap((m) => m.lessons), [course]);
   const [activeLessonId, setActiveLessonId] = useState<number | null>(null);
   const [completed, setCompleted] = useState<Set<number>>(new Set());
+
+  // Serverda saqlangan progress formaning boshlang'ich holatiga qo'shiladi.
+  useEffect(() => {
+    const ids = enrollment?.completedLessonIds;
+    if (ids && ids.length > 0) {
+      setCompleted((prev) => new Set([...prev, ...ids]));
+    }
+  }, [enrollment?.completedLessonIds]);
+
+  const progressMutation = useMutation({
+    mutationFn: (lessonId: number) =>
+      enrollmentsService.updateProgress(enrollment!.enrollmentId, lessonId, true),
+    onSuccess: () => {
+      // Dashboard/sertifikatlar yangilansin (kurs tugasa sertifikat beriladi).
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["my-courses"] });
+    },
+  });
+
+  const markComplete = (lessonId: number) => {
+    setCompleted((prev) => new Set(prev).add(lessonId));
+    if (enrollment) progressMutation.mutate(lessonId);
+  };
 
   if (isLoading || !course) return <LoadingState className="min-h-screen" />;
 
@@ -87,7 +123,7 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
                 </p>
               </div>
               <Button
-                onClick={() => activeLesson && setCompleted((prev) => new Set(prev).add(activeLesson.id))}
+                onClick={() => activeLesson && markComplete(activeLesson.id)}
                 disabled={!!activeLesson && !!isDone(activeLesson.id)}
                 className="shrink-0 bg-emerald-600 hover:bg-emerald-700"
               >

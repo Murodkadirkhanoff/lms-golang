@@ -13,7 +13,7 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
         <h1 className="text-2xl font-extrabold">{t("studio.editCourseTitle")}</h1>
         <p className="text-muted-foreground">{t("studio.courseHash", { id })}</p>
       </div>
-      <CourseForm />
+      <CourseForm courseId={Number(id)} />
     </div>
   );
 }

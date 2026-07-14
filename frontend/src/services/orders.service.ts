@@ -24,4 +24,23 @@ export const ordersService = {
     const { data } = await api.get(`/me/orders/${id}`);
     return data.order;
   },
+
+  // POST /me/orders — narxlar serverda hisoblanadi, to'lov hozircha mock
+  // (buyurtma darhol "paid" bo'lib, kurslarga kirish ochiladi).
+  async checkout(items: CheckoutItem[], paymentMethod: string): Promise<Order> {
+    if (USE_MOCK) {
+      await delay(800);
+      return orders[0];
+    }
+    const { data } = await api.post("/me/orders", {
+      items: items.map((i) => ({ course_id: i.courseId ?? null, lesson_id: i.lessonId ?? null })),
+      payment_method: paymentMethod,
+    });
+    return data.order;
+  },
 };
+
+export interface CheckoutItem {
+  courseId?: number;
+  lessonId?: number;
+}

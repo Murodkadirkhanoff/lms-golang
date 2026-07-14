@@ -34,6 +34,34 @@ export interface CreateCourseInput {
   modules: CreateModuleInput[];
 }
 
+// Maps to the Go backend columns (snake_case). instructor_id is set by the
+// server from the authenticated user. Modules/lessons carry their position
+// from array order, matching the `modules`/`lessons` tables.
+function toApiPayload(input: CreateCourseInput) {
+  return {
+    title: input.title,
+    description: input.description,
+    category_id: input.categoryId,
+    lang: input.lang,
+    price: input.price,
+    is_published: input.isPublished,
+    modules: input.modules.map((m, mi) => ({
+      title: m.title,
+      position: mi,
+      lessons: m.lessons.map((l, li) => ({
+        title: l.title,
+        type: l.type,
+        content_url: l.contentUrl,
+        content: l.content,
+        duration_seconds: l.durationSeconds,
+        position: li,
+        price: l.price,
+        is_free: l.isFree,
+      })),
+    })),
+  };
+}
+
 export const coursesService = {
   async list(query: CourseQuery = {}): Promise<Paginated<Course>> {
     if (USE_MOCK) {
@@ -137,31 +165,25 @@ export const coursesService = {
         isPublished: input.isPublished,
       };
     }
-    // Maps to the Go backend columns (snake_case). instructor_id is set by the
-    // server from the authenticated user. Modules/lessons carry their position
-    // from array order, matching the `modules`/`lessons` tables.
-    const { data } = await api.post("/courses", {
-      title: input.title,
-      description: input.description,
-      category_id: input.categoryId,
-      lang: input.lang,
-      price: input.price,
-      is_published: input.isPublished,
-      modules: input.modules.map((m, mi) => ({
-        title: m.title,
-        position: mi,
-        lessons: m.lessons.map((l, li) => ({
-          title: l.title,
-          type: l.type,
-          content_url: l.contentUrl,
-          content: l.content,
-          duration_seconds: l.durationSeconds,
-          position: li,
-          price: l.price,
-          is_free: l.isFree,
-        })),
-      })),
-    });
+    const { data } = await api.post("/courses", toApiPayload(input));
+    return data.course;
+  },
+
+  async update(id: number, input: CreateCourseInput): Promise<Course> {
+    if (USE_MOCK) {
+      await delay(600);
+      const existing = courses.find((c) => c.id === id) ?? courses[0];
+      return {
+        ...existing,
+        title: input.title,
+        description: input.description,
+        categoryId: input.categoryId,
+        lang: input.lang,
+        price: input.price,
+        isPublished: input.isPublished,
+      };
+    }
+    const { data } = await api.patch(`/courses/${id}`, toApiPayload(input));
     return data.course;
   },
 };
