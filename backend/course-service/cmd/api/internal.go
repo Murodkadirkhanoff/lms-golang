@@ -11,19 +11,28 @@ import (
 // Ichki endpointlar enrollment-service uchun: kurs narxi/holati (checkout),
 // dars ro'yxati (lesson_access to'ldirish) va to'liq kurs obyektlari (me/courses).
 
-// internalListCoursesHandler — GET /internal/courses?ids=1,2.
+// internalListCoursesHandler — GET /internal/courses?ids=1,2 yoki
+// ?instructor_id=N (teaching stats: instruktorning barcha kurslari).
 // To'liq Course JSON qaytaradi (public list bilan bir xil shakl).
 func (app *application) internalListCoursesHandler(w http.ResponseWriter, r *http.Request) {
-	ids := jsonutil.ReadIDList(r.URL.Query(), "ids")
-	if len(ids) == 0 {
-		app.BadRequest(w, r, errors.New("ids query parameter must be provided"))
+	qs := r.URL.Query()
+	ids := jsonutil.ReadIDList(qs, "ids")
+	instructorID := int64(jsonutil.ReadInt(qs, "instructor_id", 0))
+	if len(ids) == 0 && instructorID == 0 {
+		app.BadRequest(w, r, errors.New("ids or instructor_id query parameter must be provided"))
 		return
+	}
+
+	pageSize := len(ids)
+	if pageSize == 0 {
+		pageSize = 1000
 	}
 
 	courses, _, err := app.models.Courses.List(data.CourseFilters{
 		IDs:                ids,
+		InstructorID:       instructorID,
 		Page:               1,
-		PageSize:           len(ids),
+		PageSize:           pageSize,
 		IncludeUnpublished: true,
 	})
 	if err != nil {
@@ -136,6 +145,27 @@ func (app *application) internalCourseCountsHandler(w http.ResponseWriter, r *ht
 	}
 
 	err = jsonutil.WriteJSON(w, http.StatusOK, jsonutil.Envelope{"counts": counts}, nil)
+	if err != nil {
+		app.ServerError(w, r, err)
+	}
+}
+
+// internalQuizStatsHandler — GET /internal/quiz-stats?course_ids=1,2.
+// Instruktor analitikasi: kurslar bo'yicha o'rtacha quiz bali.
+func (app *application) internalQuizStatsHandler(w http.ResponseWriter, r *http.Request) {
+	ids := jsonutil.ReadIDList(r.URL.Query(), "course_ids")
+	if len(ids) == 0 {
+		app.BadRequest(w, r, errors.New("course_ids query parameter must be provided"))
+		return
+	}
+
+	avg, err := app.models.Quizzes.AvgScoreForCourses(ids)
+	if err != nil {
+		app.ServerError(w, r, err)
+		return
+	}
+
+	err = jsonutil.WriteJSON(w, http.StatusOK, jsonutil.Envelope{"avgScore": avg}, nil)
 	if err != nil {
 		app.ServerError(w, r, err)
 	}

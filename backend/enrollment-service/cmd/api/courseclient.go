@@ -16,6 +16,8 @@ type courseInfo struct {
 	Price        float64 `json:"price"`
 	IsPublished  bool    `json:"isPublished"`
 	TotalLessons int     `json:"totalLessons"`
+	Rating       float64 `json:"rating"`
+	RatingCount  int     `json:"ratingCount"`
 	Instructor   struct {
 		Name string `json:"name"`
 	} `json:"instructor"`
@@ -103,6 +105,50 @@ func (app *application) fetchLessons(ctx context.Context, ids []int64) (map[int6
 	}
 
 	return lessons, nil
+}
+
+// fetchCoursesByInstructor instruktorning barcha kurslarini oladi
+// (teaching stats; unpublished ham kiradi).
+func (app *application) fetchCoursesByInstructor(ctx context.Context, instructorID int64) ([]*courseInfo, error) {
+	var response struct {
+		Courses []json.RawMessage `json:"courses"`
+	}
+
+	err := app.courseClient.Get(ctx,
+		fmt.Sprintf("/internal/courses?instructor_id=%d", instructorID), &response)
+	if err != nil {
+		return nil, fmt.Errorf("course-service: %w", err)
+	}
+
+	courses := make([]*courseInfo, 0, len(response.Courses))
+	for _, raw := range response.Courses {
+		var info courseInfo
+		if err := json.Unmarshal(raw, &info); err != nil {
+			return nil, err
+		}
+		info.Raw = raw
+		courses = append(courses, &info)
+	}
+
+	return courses, nil
+}
+
+// fetchQuizAvgScore instruktor kurslari bo'yicha o'rtacha quiz bali.
+func (app *application) fetchQuizAvgScore(ctx context.Context, courseIDs []int64) (float64, error) {
+	if len(courseIDs) == 0 {
+		return 0, nil
+	}
+
+	var response struct {
+		AvgScore float64 `json:"avgScore"`
+	}
+
+	err := app.courseClient.Get(ctx, "/internal/quiz-stats?course_ids="+joinIDs(courseIDs), &response)
+	if err != nil {
+		return 0, fmt.Errorf("course-service: %w", err)
+	}
+
+	return response.AvgScore, nil
 }
 
 // markEnrolled course-service'dagi student_count'ni oshiradi. Statistik

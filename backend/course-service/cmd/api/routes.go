@@ -39,6 +39,8 @@ func (app *application) routes() http.Handler {
 			r.Delete("/courses/{id}", app.deleteCourseHandler)
 			r.Post("/courses/{id}/reviews", app.createReviewHandler)
 			r.Put("/courses/{id}/quiz", app.upsertQuizHandler)
+			r.Get("/quizzes/{id}/attempts", app.listQuizAttemptsHandler)
+			r.Post("/quizzes/{id}/attempts", app.submitQuizAttemptHandler)
 		})
 
 		r.Get("/instructors", app.listInstructorsHandler)
@@ -55,6 +57,7 @@ func (app *application) routes() http.Handler {
 		r.Get("/lessons", app.internalLessonsHandler)
 		r.Get("/stats", app.internalStatsHandler)
 		r.Get("/course-counts", app.internalCourseCountsHandler)
+		r.Get("/quiz-stats", app.internalQuizStatsHandler)
 	})
 
 	return r

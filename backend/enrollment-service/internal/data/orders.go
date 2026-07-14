@@ -194,6 +194,59 @@ func (m OrderModel) Revenue() (float64, error) {
 	return revenue, err
 }
 
+// MonthRevenue — bitta oyning daromadi (teaching stats diagrammasi).
+type MonthRevenue struct {
+	Month   string  `json:"month"` // "YYYY-MM"
+	Revenue float64 `json:"revenue"`
+}
+
+// RevenueForItems instruktor kurslari (va shu kurslarning alohida darslari)
+// bo'yicha to'langan buyurtmalar daromadi: jami va so'nggi 6 oyning oylik
+// taqsimoti (bo'sh oylar 0 bilan to'ldiriladi).
+func (m OrderModel) RevenueForItems(courseIDs, lessonIDs []int64) (float64, []MonthRevenue, error) {
+	query := `
+		SELECT to_char(date_trunc('month', o.created_at), 'YYYY-MM') AS month,
+		       COALESCE(sum(oi.price), 0)
+		FROM order_items oi
+		JOIN orders o ON o.id = oi.order_id
+		WHERE o.status = 'paid'
+		  AND (oi.course_id = ANY($1) OR oi.lesson_id = ANY($2))
+		GROUP BY month
+	`
+
+	rows, err := m.DB.Query(query, int64Array(courseIDs), int64Array(lessonIDs))
+	if err != nil {
+		return 0, nil, err
+	}
+	defer rows.Close()
+
+	byMonth := map[string]float64{}
+	total := 0.0
+
+	for rows.Next() {
+		var month string
+		var revenue float64
+		if err := rows.Scan(&month, &revenue); err != nil {
+			return 0, nil, err
+		}
+		byMonth[month] = revenue
+		total += revenue
+	}
+	if err := rows.Err(); err != nil {
+		return 0, nil, err
+	}
+
+	monthly := make([]MonthRevenue, 0, 6)
+	now := time.Now().UTC()
+	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	for i := 5; i >= 0; i-- {
+		month := firstOfMonth.AddDate(0, -i, 0).Format("2006-01")
+		monthly = append(monthly, MonthRevenue{Month: month, Revenue: byMonth[month]})
+	}
+
+	return total, monthly, nil
+}
+
 func (m OrderModel) itemsForOrders(orderIDs []int64) ([]*OrderItem, error) {
 	items, _, err := m.itemsWithOrderIDs(orderIDs)
 	return items, err

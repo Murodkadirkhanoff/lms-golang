@@ -29,6 +29,7 @@ func (app *application) routes() http.Handler {
 
 			r.Route("/me", func(r chi.Router) {
 				r.Get("/stats", app.meStatsHandler)
+				r.Get("/teaching/stats", app.meTeachingStatsHandler)
 				r.Get("/courses", app.meCoursesHandler)
 				r.Get("/orders", app.meOrdersHandler)
 				r.Post("/orders", app.checkoutHandler)
