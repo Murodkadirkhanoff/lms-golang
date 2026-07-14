@@ -46,6 +46,7 @@ func (app *application) routes() http.Handler {
 		r.Use(middleware.InternalOnly(app.config.internalKey, app.Responder))
 		r.Get("/stats", app.internalStatsHandler)
 		r.Get("/enrollment-counts", app.internalEnrollmentCountsHandler)
+		r.Get("/access", app.internalAccessHandler)
 	})
 
 	return r

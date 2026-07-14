@@ -48,6 +48,8 @@ export interface Lesson {
   contentUrl?: string; // video lessons
   content?: string; // text lessons (markdown)
   completed?: boolean;
+  // Paywall: kontent yashirilgan — sotib olinmagan pullik dars.
+  locked?: boolean;
 }
 
 export interface Module {

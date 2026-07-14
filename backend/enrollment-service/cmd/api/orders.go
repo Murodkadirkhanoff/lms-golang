@@ -37,8 +37,11 @@ func (app *application) checkoutHandler(w http.ResponseWriter, r *http.Request) 
 		input.PaymentMethod = "card"
 	}
 
+	// Takroriy elementlar savatda bo'lsa ham bir marta hisoblanadi.
 	courseIDs := []int64{}
 	lessonIDs := []int64{}
+	seenCourses := map[int64]bool{}
+	seenLessons := map[int64]bool{}
 	for i, item := range input.Items {
 		hasCourse := item.CourseID != nil && *item.CourseID > 0
 		hasLesson := item.LessonID != nil && *item.LessonID > 0
@@ -46,9 +49,12 @@ func (app *application) checkoutHandler(w http.ResponseWriter, r *http.Request) 
 			v.AddError(fmt.Sprintf("items[%d]", i), "must contain exactly one of course_id or lesson_id")
 			continue
 		}
-		if hasCourse {
+		if hasCourse && !seenCourses[*item.CourseID] {
+			seenCourses[*item.CourseID] = true
 			courseIDs = append(courseIDs, *item.CourseID)
-		} else {
+		}
+		if hasLesson && !seenLessons[*item.LessonID] {
+			seenLessons[*item.LessonID] = true
 			lessonIDs = append(lessonIDs, *item.LessonID)
 		}
 	}
@@ -70,6 +76,35 @@ func (app *application) checkoutHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Dars xaridida ham darsning kursi kimniki ekanini bilish kerak
+	// (o'z kursini sotib olishni taqiqlash uchun).
+	lessonCourseIDs := []int64{}
+	for _, l := range lessons {
+		if !seenCourses[l.CourseID] {
+			lessonCourseIDs = append(lessonCourseIDs, l.CourseID)
+		}
+	}
+	lessonCourses, err := app.fetchCourses(r.Context(), lessonCourseIDs)
+	if err != nil {
+		app.ServerError(w, r, err)
+		return
+	}
+	for id, c := range courses {
+		lessonCourses[id] = c
+	}
+
+	// Allaqachon egalik qilinayotgan narsani qayta sotib bo'lmaydi.
+	ownedCourses, err := app.models.Enrollments.OwnedCourses(claims.UserID, courseIDs)
+	if err != nil {
+		app.ServerError(w, r, err)
+		return
+	}
+	ownedLessons, err := app.models.Enrollments.OwnedLessons(claims.UserID, lessonIDs)
+	if err != nil {
+		app.ServerError(w, r, err)
+		return
+	}
+
 	order := &data.Order{
 		UserID:        claims.UserID,
 		Status:        "paid", // mock to'lov
@@ -78,8 +113,15 @@ func (app *application) checkoutHandler(w http.ResponseWriter, r *http.Request) 
 
 	for i, id := range courseIDs {
 		course, ok := courses[id]
-		if !ok || !course.IsPublished {
+		switch {
+		case !ok || !course.IsPublished:
 			v.AddError(fmt.Sprintf("items[%d].course_id", i), "course does not exist")
+			continue
+		case course.Instructor.ID == claims.UserID:
+			v.AddError(fmt.Sprintf("items[%d].course_id", i), "you cannot purchase your own course")
+			continue
+		case ownedCourses[id]:
+			v.AddError(fmt.Sprintf("items[%d].course_id", i), "you already own this course")
 			continue
 		}
 		order.Items = append(order.Items, &data.OrderItem{
@@ -93,8 +135,15 @@ func (app *application) checkoutHandler(w http.ResponseWriter, r *http.Request) 
 
 	for i, id := range lessonIDs {
 		lesson, ok := lessons[id]
-		if !ok {
+		switch {
+		case !ok:
 			v.AddError(fmt.Sprintf("items[%d].lesson_id", i), "lesson does not exist")
+			continue
+		case lessonCourses[lesson.CourseID] != nil && lessonCourses[lesson.CourseID].Instructor.ID == claims.UserID:
+			v.AddError(fmt.Sprintf("items[%d].lesson_id", i), "you cannot purchase a lesson from your own course")
+			continue
+		case ownedLessons[id]:
+			v.AddError(fmt.Sprintf("items[%d].lesson_id", i), "you already own this lesson")
 			continue
 		}
 		order.Items = append(order.Items, &data.OrderItem{

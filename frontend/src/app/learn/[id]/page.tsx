@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Download,
   FileText,
+  Lock,
   PlayCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -104,8 +105,21 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
       <div className="flex flex-col lg:flex-row">
         {/* Main */}
         <main className="min-w-0 flex-1">
-          {/* Lesson content: video player or text article */}
-          {activeLesson?.type === "text" ? (
+          {/* Lesson content: locked paywall panel, video player or text article */}
+          {activeLesson?.locked ? (
+            <div className="grid aspect-video place-items-center bg-slate-900 px-6 text-center text-white">
+              <div>
+                <div className="mx-auto grid size-14 place-items-center rounded-full bg-white/10">
+                  <Lock className="size-7" />
+                </div>
+                <h2 className="mt-4 text-lg font-bold">{t("learn.lockedTitle")}</h2>
+                <p className="mt-1 text-sm text-slate-300">{t("learn.lockedDesc")}</p>
+                <Button asChild className="mt-4">
+                  <Link href={ROUTES.course(course.slug)}>{t("learn.lockedCta")}</Link>
+                </Button>
+              </div>
+            </div>
+          ) : activeLesson?.type === "text" ? (
             <article className="mx-auto max-w-3xl px-6 py-8">
               <Markdown>{activeLesson.content ?? ""}</Markdown>
             </article>
@@ -124,7 +138,7 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
               </div>
               <Button
                 onClick={() => activeLesson && markComplete(activeLesson.id)}
-                disabled={!!activeLesson && !!isDone(activeLesson.id)}
+                disabled={!!activeLesson && (!!isDone(activeLesson.id) || !!activeLesson.locked)}
                 className="shrink-0 bg-emerald-600 hover:bg-emerald-700"
               >
                 <CheckCircle2 className="size-4" />
@@ -204,6 +218,8 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
                   >
                     {done ? (
                       <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
+                    ) : lesson.locked ? (
+                      <Lock className={cn("size-4 shrink-0", active ? "text-primary" : "text-slate-400")} />
                     ) : lesson.type === "text" ? (
                       <FileText className={cn("size-4 shrink-0", active ? "text-primary" : "text-slate-400")} />
                     ) : (

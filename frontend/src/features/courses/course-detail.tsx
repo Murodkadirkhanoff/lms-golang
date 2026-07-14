@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Stars } from "@/components/shared/stars";
 import { LoadingState, ErrorState } from "@/components/shared/states";
 import { coursesService } from "@/services/courses.service";
+import { dashboardService } from "@/services/dashboard.service";
 import { enrollmentsService } from "@/services/enrollments.service";
 import { ROUTES } from "@/constants";
 import { cn, formatNumber, formatPrice } from "@/lib/utils";
@@ -49,6 +50,13 @@ export function CourseDetail({ slug }: { slug: string }) {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const t = useT();
+
+  // Allaqachon yozilgan foydalanuvchiga sotib olish tugmalari ko'rsatilmaydi.
+  const { data: enrolled } = useQuery({
+    queryKey: ["dashboard", "enrolled"],
+    queryFn: dashboardService.getEnrolled,
+    enabled: isAuthenticated,
+  });
 
   // Bepul kursga yozilish — backendda enrollment yaratib learn'ga o'tadi.
   const enrollMutation = useMutation({
@@ -246,7 +254,11 @@ export function CourseDetail({ slug }: { slug: string }) {
                 <div className="flex items-end gap-2">
                   <span className="text-3xl font-extrabold">{formatPrice(course.price)}</span>
                 </div>
-                {course.price === 0 ? (
+                {enrolled?.some((e) => e.course.id === course.id) ? (
+                  <Button asChild className="mt-4 w-full" size="lg">
+                    <Link href={ROUTES.learn(course.id)}>{t("dash.continueLearning")}</Link>
+                  </Button>
+                ) : course.price === 0 ? (
                   <>
                     <Button
                       className="mt-4 w-full"

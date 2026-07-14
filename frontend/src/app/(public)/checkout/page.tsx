@@ -33,8 +33,9 @@ export default function CheckoutPage() {
 
   const { lines, subtotal, isLoading } = useCartLines();
 
-  const tax = Math.round(subtotal * 0.08);
-  const total = subtotal + tax;
+  // Soliq qo'shilmaydi — backend buyurtmani element narxlari yig'indisi
+  // bilan saqlaydi; ko'rsatilgan summa saqlangan bilan bir xil bo'lishi shart.
+  const total = subtotal;
 
   // Buyurtma backendda yaratiladi (POST /me/orders); to'lovning o'zi hozircha
   // simulyatsiya — server buyurtmani darhol "paid" qilib kirish ochadi.
@@ -158,7 +159,6 @@ export default function CheckoutPage() {
                 </div>
                 <div className="mt-5 space-y-2 border-t pt-5 text-sm">
                   <Row label={t("checkout.subtotal")} value={formatPrice(subtotal)} />
-                  <Row label={t("checkout.tax")} value={formatPrice(tax)} />
                   <div className="flex items-center justify-between border-t pt-3 text-base font-extrabold">
                     <span>{t("cart.total")}</span>
                     <span>{formatPrice(total)}</span>

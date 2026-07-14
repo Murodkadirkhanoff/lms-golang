@@ -207,6 +207,82 @@ func (m EnrollmentModel) CompletedLessonIDs(userID int64) (map[int64]bool, error
 	return done, rows.Err()
 }
 
+// OwnedCourses checkout uchun: foydalanuvchi allaqachon yozilgan kurslar
+// (takroriy xaridni oldini olish).
+func (m EnrollmentModel) OwnedCourses(userID int64, courseIDs []int64) (map[int64]bool, error) {
+	owned := map[int64]bool{}
+	if len(courseIDs) == 0 {
+		return owned, nil
+	}
+
+	query := `SELECT course_id FROM enrollments WHERE user_id = $1 AND course_id = ANY($2)`
+
+	rows, err := m.DB.Query(query, userID, int64Array(courseIDs))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		owned[id] = true
+	}
+
+	return owned, rows.Err()
+}
+
+// OwnedLessons checkout uchun: foydalanuvchida kirish huquqi bor darslar.
+func (m EnrollmentModel) OwnedLessons(userID int64, lessonIDs []int64) (map[int64]bool, error) {
+	owned := map[int64]bool{}
+	if len(lessonIDs) == 0 {
+		return owned, nil
+	}
+
+	query := `SELECT lesson_id FROM lesson_access WHERE user_id = $1 AND lesson_id = ANY($2)`
+
+	rows, err := m.DB.Query(query, userID, int64Array(lessonIDs))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		owned[id] = true
+	}
+
+	return owned, rows.Err()
+}
+
+// AccessibleLessonIDs foydalanuvchining kursda kirish huquqi bor darslari
+// (course-service paywall tekshiruvi uchun).
+func (m EnrollmentModel) AccessibleLessonIDs(userID, courseID int64) ([]int64, error) {
+	query := `SELECT lesson_id FROM lesson_access WHERE user_id = $1 AND course_id = $2`
+
+	rows, err := m.DB.Query(query, userID, courseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	ids := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+
+	return ids, rows.Err()
+}
+
 // CountsByCourses teaching stats uchun: kurs -> yozilgan studentlar soni.
 func (m EnrollmentModel) CountsByCourses(courseIDs []int64) (map[int64]int, error) {
 	counts := map[int64]int{}

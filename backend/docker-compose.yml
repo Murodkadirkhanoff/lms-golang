@@ -89,6 +89,8 @@ services:
       INTERNAL_KEY: ${INTERNAL_KEY}
       CORS_TRUSTED_ORIGINS: ${CORS_TRUSTED_ORIGINS:-http://localhost:3000}
       AUTH_SERVICE_URL: http://auth-service:4001
+      # Paywall: dars kirish huquqlari enrollment-service'dan so'raladi.
+      ENROLLMENT_SERVICE_URL: http://enrollment-service:4003
     depends_on:
       db:
         condition: service_healthy

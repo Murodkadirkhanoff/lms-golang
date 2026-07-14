@@ -25,6 +25,30 @@ func (app *application) internalStatsHandler(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+// internalAccessHandler — GET /internal/access?user_id=N&course_id=N.
+// course-service paywall uchun: foydalanuvchining kursda kirish huquqi bor
+// dars id'lari.
+func (app *application) internalAccessHandler(w http.ResponseWriter, r *http.Request) {
+	qs := r.URL.Query()
+	userID := int64(jsonutil.ReadInt(qs, "user_id", 0))
+	courseID := int64(jsonutil.ReadInt(qs, "course_id", 0))
+	if userID == 0 || courseID == 0 {
+		app.BadRequest(w, r, errors.New("user_id and course_id query parameters must be provided"))
+		return
+	}
+
+	ids, err := app.models.Enrollments.AccessibleLessonIDs(userID, courseID)
+	if err != nil {
+		app.ServerError(w, r, err)
+		return
+	}
+
+	err = jsonutil.WriteJSON(w, http.StatusOK, jsonutil.Envelope{"lessonIds": ids}, nil)
+	if err != nil {
+		app.ServerError(w, r, err)
+	}
+}
+
 // internalEnrollmentCountsHandler — GET /internal/enrollment-counts?ids=<userIDs>.
 // Admin users ro'yxati uchun: user -> yozilgan kurslari soni.
 func (app *application) internalEnrollmentCountsHandler(w http.ResponseWriter, r *http.Request) {

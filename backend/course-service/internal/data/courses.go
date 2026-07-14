@@ -35,6 +35,8 @@ type Lesson struct {
 	Position        int     `json:"-"`
 	Price           float64 `json:"price"`
 	IsFree          bool    `json:"isFree"`
+	// Paywall: kontent so'rovchidan yashirilgan (sanitizeCourseContent).
+	Locked bool `json:"locked,omitempty"`
 }
 
 type Module struct {

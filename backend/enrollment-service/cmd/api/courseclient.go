@@ -19,6 +19,7 @@ type courseInfo struct {
 	Rating       float64 `json:"rating"`
 	RatingCount  int     `json:"ratingCount"`
 	Instructor   struct {
+		ID   int64  `json:"id"`
 		Name string `json:"name"`
 	} `json:"instructor"`
 
