@@ -1,0 +1,4 @@
+ALTER TABLE courses DROP COLUMN IF EXISTS student_count;
+DROP TABLE IF EXISTS quiz_questions;
+DROP TABLE IF EXISTS quizzes;
+DROP TABLE IF EXISTS reviews;

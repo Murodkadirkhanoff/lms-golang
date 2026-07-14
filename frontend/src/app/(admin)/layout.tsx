@@ -2,6 +2,7 @@
 
 import { BookOpen, FolderTree, LayoutDashboard, Users } from "lucide-react";
 import { SidebarLayout, type SidebarItem } from "@/components/shared/sidebar-layout";
+import { RequireAuth } from "@/components/shared/require-auth";
 import { ROUTES } from "@/constants";
 import { useT } from "@/providers/locale-provider";
 
@@ -15,13 +16,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   ];
 
   return (
-    <SidebarLayout
-      items={items}
-      title={t("admin.title")}
-      variant="dark"
-      topbar={<h1 className="text-lg font-bold">{t("admin.administration")}</h1>}
-    >
-      {children}
-    </SidebarLayout>
+    <RequireAuth>
+      <SidebarLayout
+        items={items}
+        title={t("admin.title")}
+        variant="dark"
+        topbar={<h1 className="text-lg font-bold">{t("admin.administration")}</h1>}
+      >
+        {children}
+      </SidebarLayout>
+    </RequireAuth>
   );
 }

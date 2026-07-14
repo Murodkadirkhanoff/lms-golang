@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,16 @@ import { useT } from "@/providers/locale-provider";
 import { useAuth } from "@/providers/auth-provider";
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const t = useT();
   const { setUser } = useAuth();
   const [serverError, setServerError] = useState("");
@@ -29,7 +38,9 @@ export default function LoginPage() {
     try {
       const { user } = await authService.login(values);
       setUser(user);
-      router.push(ROUTES.dashboard);
+      // RequireAuth login sahifasiga ?next= bilan yuboradi — o'sha joyga qaytamiz.
+      const next = searchParams.get("next");
+      router.push(next && next.startsWith("/") ? next : ROUTES.dashboard);
     } catch (err) {
       setServerError(err instanceof Error ? err.message : t("auth.loginFailed"));
     }

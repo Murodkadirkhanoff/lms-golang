@@ -46,10 +46,14 @@ import { useAuth, initials } from "@/providers/auth-provider";
 import { useToast } from "@/providers/toast-provider";
 import { useT } from "@/providers/locale-provider";
 
-// No role gating: every signed-in user sees both "My Learning" and "Teach".
-const navLinks = [
+// Guests only see the catalog; signed-in users additionally get
+// "My Learning" and "Teach" (no role gating between the two).
+const publicNavLinks = [
   { href: ROUTES.courses, key: "nav.browse", icon: BookOpen },
   { href: ROUTES.categories, key: "nav.categories", icon: LayoutGrid },
+];
+
+const authedNavLinks = [
   { href: ROUTES.dashboard, key: "nav.myLearning", icon: LayoutDashboard },
   { href: ROUTES.studio, key: "nav.teach", icon: GraduationCap },
 ];
@@ -61,19 +65,24 @@ const accountLinks = [
   { href: ROUTES.purchases, key: "nav.purchases", icon: Receipt },
   { href: ROUTES.profile, key: "nav.profile", icon: User },
   { href: ROUTES.settings, key: "nav.settings", icon: Settings },
-  { href: ROUTES.admin, key: "nav.admin", icon: Shield },
 ];
+
+// Admin panel — only for users whose backend role is "admin".
+const adminLink = { href: ROUTES.admin, key: "nav.admin", icon: Shield };
 
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const cart = useCart();
   const wishlist = useWishlist();
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const toast = useToast();
   const t = useT();
   const [search, setSearch] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const navLinks = user ? [...publicNavLinks, ...authedNavLinks] : publicNavLinks;
+  const menuLinks = user?.role === "admin" ? [...accountLinks, adminLink] : accountLinks;
 
   const submitSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,37 +194,50 @@ export function Navbar() {
             <ShoppingCart className="size-5" />
           </IconLink>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="ml-1 rounded-full focus:outline-none focus:ring-2 focus:ring-ring" aria-label={t("nav.account")}>
-                <Avatar className="bg-indigo-200">
-                  <AvatarFallback className="bg-indigo-200 text-indigo-700">
-                    {user ? initials(user.name) : "?"}
-                  </AvatarFallback>
-                </Avatar>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>
-                <div className="font-semibold">{user?.name ?? "Guest"}</div>
-                <div className="text-xs text-muted-foreground">{user?.email ?? ""}</div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {accountLinks.map((link) => (
-                <DropdownMenuItem key={link.href} asChild>
-                  <Link href={link.href}>
-                    <link.icon className="size-4 text-muted-foreground" />
-                    {t(link.key)}
-                  </Link>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="ml-1 rounded-full focus:outline-none focus:ring-2 focus:ring-ring" aria-label={t("nav.account")}>
+                  <Avatar className="bg-indigo-200">
+                    <AvatarFallback className="bg-indigo-200 text-indigo-700">
+                      {initials(user.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>
+                  <div className="font-semibold">{user.name}</div>
+                  <div className="text-xs text-muted-foreground">{user.email}</div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {menuLinks.map((link) => (
+                  <DropdownMenuItem key={link.href} asChild>
+                    <Link href={link.href}>
+                      <link.icon className="size-4 text-muted-foreground" />
+                      {t(link.key)}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="size-4 text-muted-foreground" />
+                  {t("common.logout")}
                 </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="size-4 text-muted-foreground" />
-                {t("common.logout")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            !isLoading && (
+              <div className="ml-1 flex items-center gap-2">
+                <Button asChild variant="ghost" size="sm">
+                  <Link href={ROUTES.login}>{t("common.login")}</Link>
+                </Button>
+                <Button asChild size="sm">
+                  <Link href={ROUTES.register}>{t("auth.signUp")}</Link>
+                </Button>
+              </div>
+            )
+          )}
         </div>
       </nav>
     </header>

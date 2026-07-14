@@ -5,7 +5,9 @@ export interface User {
   name: string;
   email: string;
   avatarColor?: string;
-  // No role gating: any user can both learn and teach.
+  // No role gating between learning and teaching — any user can do both.
+  // "admin" additionally unlocks the admin panel link.
+  role?: "student" | "instructor" | "admin";
   createdAt: string;
 }
 

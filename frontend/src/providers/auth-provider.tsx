@@ -15,24 +15,14 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// While the backend is mocked, fall back to a demo user so the signed-in UI is
-// populated even before an explicit login. Swap this for `null` (or remove it)
-// once real auth is wired — the rest of the app already reads from this context.
-const DEMO_USER: User = {
-  id: 1,
-  name: "Amir Karimov",
-  email: "amir@example.com",
-  createdAt: "2026-06-12",
-};
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Server and first client render start with the demo user so markup matches;
+  // Server and first client render start signed-out so markup matches;
   // the stored session (if any) is reconciled on mount.
-  const [user, setUserState] = useState<User | null>(DEMO_USER);
+  const [user, setUserState] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setUserState(getStoredUser() ?? DEMO_USER);
+    setUserState(getStoredUser());
     setIsLoading(false);
   }, []);
 

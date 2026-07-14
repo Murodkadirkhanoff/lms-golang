@@ -65,6 +65,7 @@ export const authService = {
       return result;
     }
     const { data } = await api.post("/users", input);
+    persist(data);
     return data;
   },
 

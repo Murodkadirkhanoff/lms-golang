@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { BarChart3, BookOpen, LayoutDashboard, Plus } from "lucide-react";
 import { SidebarLayout, type SidebarItem } from "@/components/shared/sidebar-layout";
+import { RequireAuth } from "@/components/shared/require-auth";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/constants";
 import { useT } from "@/providers/locale-provider";
@@ -16,6 +17,7 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
   ];
 
   return (
+    <RequireAuth>
     <SidebarLayout
       items={items}
       title={t("studio.title")}
@@ -35,5 +37,6 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
     >
       {children}
     </SidebarLayout>
+    </RequireAuth>
   );
 }

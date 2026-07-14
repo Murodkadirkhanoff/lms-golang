@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Award, Bell, GraduationCap, Heart, LayoutDashboard, Receipt, Settings, User } from "lucide-react";
 import { SidebarLayout, type SidebarItem } from "@/components/shared/sidebar-layout";
+import { RequireAuth } from "@/components/shared/require-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ROUTES } from "@/constants";
@@ -24,6 +25,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   ];
 
   return (
+    <RequireAuth>
     <SidebarLayout
       items={items}
       topbar={
@@ -49,5 +51,6 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     >
       {children}
     </SidebarLayout>
+    </RequireAuth>
   );
 }
