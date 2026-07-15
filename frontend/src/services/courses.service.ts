@@ -34,6 +34,34 @@ export interface CreateCourseInput {
   modules: CreateModuleInput[];
 }
 
+// Maps the form input to the Go backend's snake_case payload. Shared by
+// create (POST) and update (PATCH). Modules/lessons carry their position
+// from array order, matching the `modules`/`lessons` tables.
+function toCoursePayload(input: CreateCourseInput) {
+  return {
+    title: input.title,
+    description: input.description,
+    category_id: input.categoryId,
+    lang: input.lang,
+    price: input.price,
+    is_published: input.isPublished,
+    modules: input.modules.map((m, mi) => ({
+      title: m.title,
+      position: mi,
+      lessons: m.lessons.map((l, li) => ({
+        title: l.title,
+        type: l.type,
+        content_url: l.contentUrl,
+        content: l.content,
+        duration_seconds: l.durationSeconds,
+        position: li,
+        price: l.price,
+        is_free: l.isFree,
+      })),
+    })),
+  };
+}
+
 export const coursesService = {
   async list(query: CourseQuery = {}): Promise<Paginated<Course>> {
     if (USE_MOCK) {
@@ -137,31 +165,26 @@ export const coursesService = {
         isPublished: input.isPublished,
       };
     }
-    // Maps to the Go backend columns (snake_case). instructor_id is set by the
-    // server from the authenticated user. Modules/lessons carry their position
-    // from array order, matching the `modules`/`lessons` tables.
-    const { data } = await api.post("/courses", {
-      title: input.title,
-      description: input.description,
-      category_id: input.categoryId,
-      lang: input.lang,
-      price: input.price,
-      is_published: input.isPublished,
-      modules: input.modules.map((m, mi) => ({
-        title: m.title,
-        position: mi,
-        lessons: m.lessons.map((l, li) => ({
-          title: l.title,
-          type: l.type,
-          content_url: l.contentUrl,
-          content: l.content,
-          duration_seconds: l.durationSeconds,
-          position: li,
-          price: l.price,
-          is_free: l.isFree,
-        })),
-      })),
-    });
+    // instructor_id is set by the server from the authenticated user.
+    const { data } = await api.post("/courses", toCoursePayload(input));
+    return data.course;
+  },
+
+  async update(id: number, input: CreateCourseInput): Promise<Course> {
+    if (USE_MOCK) {
+      await delay(600);
+      const course = courses.find((c) => c.id === id) ?? courses[0];
+      return {
+        ...course,
+        title: input.title,
+        description: input.description,
+        lang: input.lang,
+        price: input.price,
+        isPublished: input.isPublished,
+        categoryId: input.categoryId,
+      };
+    }
+    const { data } = await api.patch(`/courses/${id}`, toCoursePayload(input));
     return data.course;
   },
 };

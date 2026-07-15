@@ -27,8 +27,34 @@ import { courseSchema, type CourseFormValues } from "./course-schema";
 import { LANGUAGES, ROUTES } from "@/constants";
 import { formatPrice, slugify } from "@/lib/utils";
 import { useT } from "@/providers/locale-provider";
+import type { Course } from "@/types";
 
-export function CourseForm() {
+// Maps an existing course (edit mode) into the form's shape.
+function toFormValues(course: Course): CourseFormValues {
+  return {
+    title: course.title,
+    description: course.description ?? "",
+    categoryId: course.categoryId ?? null,
+    lang: course.lang,
+    price: course.price,
+    isPublished: course.isPublished,
+    modules: (course.modules ?? []).map((m) => ({
+      title: m.title,
+      lessons: m.lessons.map((l) => ({
+        title: l.title,
+        type: l.type,
+        contentUrl: l.contentUrl ?? "",
+        content: l.content ?? "",
+        durationMinutes: Math.round(l.durationSeconds / 60),
+        price: l.price,
+        isFree: l.isFree,
+      })),
+    })),
+  };
+}
+
+// Without `course` the form creates a new one; with it, edits (PATCH).
+export function CourseForm({ course }: { course?: Course }) {
   const router = useRouter();
   const t = useT();
   const [serverError, setServerError] = useState("");
@@ -37,7 +63,9 @@ export function CourseForm() {
 
   const methods = useForm<CourseFormValues>({
     resolver: zodResolver(courseSchema),
-    defaultValues: { lang: "uz", price: 0, isPublished: false, categoryId: null, description: "", modules: [] },
+    defaultValues: course
+      ? toFormValues(course)
+      : { lang: "uz", price: 0, isPublished: false, categoryId: null, description: "", modules: [] },
   });
   const {
     register,
@@ -53,8 +81,8 @@ export function CourseForm() {
   const slug = slugify(title);
 
   const mutation = useMutation({
-    mutationFn: (values: CourseFormValues) =>
-      coursesService.create({
+    mutationFn: (values: CourseFormValues) => {
+      const input = {
         title: values.title,
         description: values.description ?? "",
         categoryId: values.categoryId,
@@ -73,9 +101,11 @@ export function CourseForm() {
             isFree: l.isFree,
           })),
         })),
-      }),
+      };
+      return course ? coursesService.update(course.id, input) : coursesService.create(input);
+    },
     onSuccess: () => router.push(ROUTES.studioCourses),
-    onError: (err) => setServerError(err instanceof Error ? err.message : "Failed to create course"),
+    onError: (err) => setServerError(err instanceof Error ? err.message : "Failed to save course"),
   });
 
   const submit = (publish: boolean) =>

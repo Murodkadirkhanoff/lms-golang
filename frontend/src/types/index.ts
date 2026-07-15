@@ -70,6 +70,7 @@ export interface Course {
   description: string;
   thumbnailColor: string;
   category: string;
+  categoryId?: number | null;
   lang: Lang;
   price: number;
   rating: number;
