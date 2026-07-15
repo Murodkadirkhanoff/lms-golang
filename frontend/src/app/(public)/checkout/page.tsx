@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, CreditCard, Lock, PlayCircle, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,6 +11,8 @@ import { FormField } from "@/components/ui/form-field";
 import { LoadingState } from "@/components/shared/states";
 import { useCart } from "@/features/cart/cart-context";
 import { useCartLines } from "@/features/cart/use-cart-lines";
+import { ordersService } from "@/services/orders.service";
+import { useAuth } from "@/providers/auth-provider";
 import { useT } from "@/providers/locale-provider";
 import { ROUTES } from "@/constants";
 import { formatPrice } from "@/lib/utils";
@@ -22,23 +25,46 @@ const PAYMENT_METHODS = [
 export default function CheckoutPage() {
   const router = useRouter();
   const cart = useCart();
+  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
   const t = useT();
   const [method, setMethod] = useState<string>("card");
-  const [processing, setProcessing] = useState(false);
+  const [serverError, setServerError] = useState("");
 
   const { lines, subtotal, isLoading } = useCartLines();
 
-  const tax = Math.round(subtotal * 0.08);
-  const total = subtotal + tax;
+  // Soliq qo'shilmaydi — backend buyurtmani element narxlari yig'indisi
+  // bilan saqlaydi; ko'rsatilgan summa saqlangan bilan bir xil bo'lishi shart.
+  const total = subtotal;
+
+  // Buyurtma backendda yaratiladi (POST /me/orders); to'lovning o'zi hozircha
+  // simulyatsiya — server buyurtmani darhol "paid" qilib kirish ochadi.
+  const checkoutMutation = useMutation({
+    mutationFn: () =>
+      ordersService.checkout(
+        lines.map((l) =>
+          l.kind === "course" ? { courseId: l.courseId } : { lessonId: l.lessonId },
+        ),
+        method,
+      ),
+    onSuccess: () => {
+      cart.clear();
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["my-courses"] });
+      router.push(ROUTES.checkoutSuccess);
+    },
+    onError: (err) => setServerError(err instanceof Error ? err.message : "Payment failed"),
+  });
+  const processing = checkoutMutation.isPending;
 
   const pay = (e: React.FormEvent) => {
     e.preventDefault();
-    setProcessing(true);
-    // Simulated payment — clear cart then redirect to confirmation.
-    setTimeout(() => {
-      cart.clear();
-      router.push(ROUTES.checkoutSuccess);
-    }, 900);
+    setServerError("");
+    if (!isAuthenticated) {
+      router.push(ROUTES.login);
+      return;
+    }
+    checkoutMutation.mutate();
   };
 
   if (cart.count === 0) {
@@ -133,12 +159,14 @@ export default function CheckoutPage() {
                 </div>
                 <div className="mt-5 space-y-2 border-t pt-5 text-sm">
                   <Row label={t("checkout.subtotal")} value={formatPrice(subtotal)} />
-                  <Row label={t("checkout.tax")} value={formatPrice(tax)} />
                   <div className="flex items-center justify-between border-t pt-3 text-base font-extrabold">
                     <span>{t("cart.total")}</span>
                     <span>{formatPrice(total)}</span>
                   </div>
                 </div>
+                {serverError && (
+                  <p className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{serverError}</p>
+                )}
                 <Button type="submit" className="mt-5 w-full" size="lg" disabled={processing}>
                   {processing ? t("checkout.processing") : t("checkout.pay", { x: formatPrice(total) })}
                 </Button>

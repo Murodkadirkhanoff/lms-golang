@@ -171,12 +171,15 @@ func (app *application) maybeIssueCertificate(r *http.Request, userID, courseID 
 }
 
 // enrolledCourse frontend EnrolledCourse tipiga mos: course to'liq Course
-// JSON'i (course-service'dan o'zgarishsiz uzatiladi).
+// JSON'i (course-service'dan o'zgarishsiz uzatiladi). enrollmentId va
+// completedLessonIds learn sahifasiga progress yozish uchun kerak.
 type enrolledCourse struct {
-	Course           json.RawMessage `json:"course"`
-	Progress         int             `json:"progress"`
-	CurrentLesson    string          `json:"currentLesson"`
-	LessonsCompleted int             `json:"lessonsCompleted"`
+	EnrollmentID       int64           `json:"enrollmentId"`
+	Course             json.RawMessage `json:"course"`
+	Progress           int             `json:"progress"`
+	CurrentLesson      string          `json:"currentLesson"`
+	LessonsCompleted   int             `json:"lessonsCompleted"`
+	CompletedLessonIDs []int64         `json:"completedLessonIds"`
 }
 
 // meCoursesHandler — GET /v1/me/courses.
@@ -233,18 +236,22 @@ func (app *application) meCoursesHandler(w http.ResponseWriter, r *http.Request)
 		}
 
 		currentLesson := ""
+		completedIDs := []int64{}
 		for _, lesson := range lessonsByCourse[e.CourseID] {
-			if !doneLessons[lesson.ID] {
+			if doneLessons[lesson.ID] {
+				completedIDs = append(completedIDs, lesson.ID)
+			} else if currentLesson == "" {
 				currentLesson = lesson.Title
-				break
 			}
 		}
 
 		items = append(items, &enrolledCourse{
-			Course:           course.Raw,
-			Progress:         progress,
-			CurrentLesson:    currentLesson,
-			LessonsCompleted: done,
+			EnrollmentID:       e.ID,
+			Course:             course.Raw,
+			Progress:           progress,
+			CurrentLesson:      currentLesson,
+			LessonsCompleted:   done,
+			CompletedLessonIDs: completedIDs,
 		})
 	}
 

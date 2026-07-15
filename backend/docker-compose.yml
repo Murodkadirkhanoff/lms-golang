@@ -14,7 +14,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      # Hostda 5433 — 5432 boshqa loyihaning Postgres konteyneri band qilgan.
+      # Docker tarmog'i ichida servislar baribir db:5432 ga ulanadi.
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d
@@ -87,6 +89,8 @@ services:
       INTERNAL_KEY: ${INTERNAL_KEY}
       CORS_TRUSTED_ORIGINS: ${CORS_TRUSTED_ORIGINS:-http://localhost:3000}
       AUTH_SERVICE_URL: http://auth-service:4001
+      # Paywall: dars kirish huquqlari enrollment-service'dan so'raladi.
+      ENROLLMENT_SERVICE_URL: http://enrollment-service:4003
     depends_on:
       db:
         condition: service_healthy

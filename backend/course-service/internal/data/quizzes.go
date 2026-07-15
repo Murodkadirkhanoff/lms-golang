@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/lib/pq"
 	"lms.chashma.uz/pkg/validator"
@@ -103,6 +104,73 @@ func (m QuizModel) GetByCourseID(courseID int64) (*Quiz, error) {
 	}
 
 	return &quiz, rows.Err()
+}
+
+// QuizAttempt — foydalanuvchining bitta urinish natijasi. Baholash clientda
+// bo'lgani uchun score tayyor holda keladi (correctIndex baribir ochiq).
+type QuizAttempt struct {
+	ID        int64     `json:"id"`
+	CreatedAt time.Time `json:"createdAt"`
+	UserID    int64     `json:"-"`
+	CourseID  int64     `json:"-"`
+	Score     int       `json:"score"`
+}
+
+func (m QuizModel) InsertAttempt(attempt *QuizAttempt) error {
+	query := `
+		INSERT INTO quiz_attempts (user_id, course_id, score)
+		VALUES ($1, $2, $3)
+		RETURNING id, created_at
+	`
+
+	return m.DB.QueryRow(query, attempt.UserID, attempt.CourseID, attempt.Score).
+		Scan(&attempt.ID, &attempt.CreatedAt)
+}
+
+func (m QuizModel) ListAttempts(userID, courseID int64) ([]*QuizAttempt, error) {
+	query := `
+		SELECT id, created_at, user_id, course_id, score
+		FROM quiz_attempts
+		WHERE user_id = $1 AND course_id = $2
+		ORDER BY created_at DESC, id DESC
+		LIMIT 20
+	`
+
+	rows, err := m.DB.Query(query, userID, courseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	attempts := []*QuizAttempt{}
+	for rows.Next() {
+		var a QuizAttempt
+		err := rows.Scan(&a.ID, &a.CreatedAt, &a.UserID, &a.CourseID, &a.Score)
+		if err != nil {
+			return nil, err
+		}
+		attempts = append(attempts, &a)
+	}
+
+	return attempts, rows.Err()
+}
+
+// AvgScoreForCourses instruktor analitikasi uchun: ko'rsatilgan kurslardagi
+// barcha urinishlarning o'rtacha bali (urinish bo'lmasa 0).
+func (m QuizModel) AvgScoreForCourses(courseIDs []int64) (float64, error) {
+	if len(courseIDs) == 0 {
+		return 0, nil
+	}
+
+	query := `
+		SELECT COALESCE(AVG(score), 0)
+		FROM quiz_attempts
+		WHERE course_id = ANY($1)
+	`
+
+	var avg float64
+	err := m.DB.QueryRow(query, pq.Array(courseIDs)).Scan(&avg)
+	return avg, err
 }
 
 // Upsert kursning quizini butunlay almashtiradi (savollar bilan birga).

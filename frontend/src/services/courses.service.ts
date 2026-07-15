@@ -34,10 +34,10 @@ export interface CreateCourseInput {
   modules: CreateModuleInput[];
 }
 
-// Maps the form input to the Go backend's snake_case payload. Shared by
-// create (POST) and update (PATCH). Modules/lessons carry their position
+// Maps to the Go backend columns (snake_case). instructor_id is set by the
+// server from the authenticated user. Modules/lessons carry their position
 // from array order, matching the `modules`/`lessons` tables.
-function toCoursePayload(input: CreateCourseInput) {
+function toApiPayload(input: CreateCourseInput) {
   return {
     title: input.title,
     description: input.description,
@@ -165,26 +165,25 @@ export const coursesService = {
         isPublished: input.isPublished,
       };
     }
-    // instructor_id is set by the server from the authenticated user.
-    const { data } = await api.post("/courses", toCoursePayload(input));
+    const { data } = await api.post("/courses", toApiPayload(input));
     return data.course;
   },
 
   async update(id: number, input: CreateCourseInput): Promise<Course> {
     if (USE_MOCK) {
       await delay(600);
-      const course = courses.find((c) => c.id === id) ?? courses[0];
+      const existing = courses.find((c) => c.id === id) ?? courses[0];
       return {
-        ...course,
+        ...existing,
         title: input.title,
         description: input.description,
+        categoryId: input.categoryId,
         lang: input.lang,
         price: input.price,
         isPublished: input.isPublished,
-        categoryId: input.categoryId,
       };
     }
-    const { data } = await api.patch(`/courses/${id}`, toCoursePayload(input));
+    const { data } = await api.patch(`/courses/${id}`, toApiPayload(input));
     return data.course;
   },
 };

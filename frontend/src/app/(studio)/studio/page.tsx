@@ -3,22 +3,63 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { coursesService } from "@/services/courses.service";
+import { dashboardService } from "@/services/dashboard.service";
 import { formatNumber, formatPrice } from "@/lib/utils";
+import { useAuth } from "@/providers/auth-provider";
 import { useT } from "@/providers/locale-provider";
 
-const revenueBars = [45, 60, 52, 78, 68, 100];
-const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+// "YYYY-MM" -> "Feb" ko'rinishidagi qisqa oy nomi.
+function monthLabel(month: string): string {
+  const date = new Date(`${month}-01T00:00:00Z`);
+  return date.toLocaleString("en", { month: "short", timeZone: "UTC" });
+}
 
 export default function StudioDashboardPage() {
   const t = useT();
-  const { data: top } = useQuery({ queryKey: ["studio", "top"], queryFn: () => coursesService.getPopular(4) });
+  const { user } = useAuth();
+
+  const { data: stats } = useQuery({
+    queryKey: ["studio", "teaching-stats"],
+    queryFn: dashboardService.getTeachingStats,
+  });
+
+  const { data: myCourses } = useQuery({
+    queryKey: ["studio", "my-courses", user?.id],
+    queryFn: () => coursesService.getByInstructor(user!.id),
+    enabled: user != null,
+  });
+
+  const top = [...(myCourses ?? [])].sort((a, b) => b.studentCount - a.studentCount).slice(0, 4);
 
   const kpis = [
-    { label: t("studio.totalRevenue"), value: "$48,250", trend: t("studio.revVsMonth"), trendColor: "text-emerald-600" },
-    { label: t("studio.totalStudents"), value: "12,840", trend: t("studio.newThisWeek"), trendColor: "text-emerald-600" },
-    { label: t("studio.publishedCourses"), value: "14", trend: t("studio.inDraft"), trendColor: "text-muted-foreground" },
-    { label: t("studio.avgRating"), value: "4.8 ★", trend: t("studio.fromReviews"), trendColor: "text-muted-foreground" },
+    {
+      label: t("studio.totalRevenue"),
+      value: stats ? formatPrice(stats.totalRevenue) : "—",
+      trend: t("studio.revVsMonth"),
+      trendColor: "text-emerald-600",
+    },
+    {
+      label: t("studio.totalStudents"),
+      value: stats ? formatNumber(stats.totalStudents) : "—",
+      trend: t("studio.newThisWeek"),
+      trendColor: "text-emerald-600",
+    },
+    {
+      label: t("studio.publishedCourses"),
+      value: stats ? String(stats.publishedCourses) : "—",
+      trend: t("studio.inDraft"),
+      trendColor: "text-muted-foreground",
+    },
+    {
+      label: t("studio.avgRating"),
+      value: stats && stats.avgRating > 0 ? `${stats.avgRating.toFixed(1)} ★` : "—",
+      trend: t("studio.fromReviews"),
+      trendColor: "text-muted-foreground",
+    },
   ];
+
+  const monthly = stats?.monthlyRevenue ?? [];
+  const maxRevenue = Math.max(...monthly.map((m) => m.revenue), 1);
 
   return (
     <div className="space-y-6">
@@ -38,10 +79,14 @@ export default function StudioDashboardPage() {
         <Card className="p-6 lg:col-span-2">
           <h2 className="mb-6 text-lg font-bold">{t("studio.revenueOverview")}</h2>
           <div className="flex h-52 items-end justify-between gap-3">
-            {revenueBars.map((h, i) => (
-              <div key={i} className="flex flex-1 flex-col items-center gap-2">
-                <div className="w-full rounded-t bg-primary/80" style={{ height: `${h}%` }} />
-                <span className="text-xs text-muted-foreground">{months[i]}</span>
+            {monthly.map((m) => (
+              <div key={m.month} className="flex flex-1 flex-col items-center gap-2">
+                <div
+                  className="w-full rounded-t bg-primary/80"
+                  style={{ height: `${Math.round((m.revenue / maxRevenue) * 100)}%` }}
+                  title={formatPrice(m.revenue)}
+                />
+                <span className="text-xs text-muted-foreground">{monthLabel(m.month)}</span>
               </div>
             ))}
           </div>
@@ -50,7 +95,7 @@ export default function StudioDashboardPage() {
         <Card className="p-6">
           <h2 className="mb-4 text-lg font-bold">{t("studio.topCourses")}</h2>
           <div className="space-y-4">
-            {top?.map((c) => (
+            {top.map((c) => (
               <div key={c.id} className="flex items-center gap-3">
                 <div className={`size-10 rounded-lg bg-gradient-to-br ${c.thumbnailColor}`} />
                 <div className="min-w-0 flex-1">

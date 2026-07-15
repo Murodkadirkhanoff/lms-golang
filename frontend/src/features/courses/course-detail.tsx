@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
   Check,
@@ -23,10 +23,13 @@ import { Badge } from "@/components/ui/badge";
 import { Stars } from "@/components/shared/stars";
 import { LoadingState, ErrorState } from "@/components/shared/states";
 import { coursesService } from "@/services/courses.service";
+import { dashboardService } from "@/services/dashboard.service";
+import { enrollmentsService } from "@/services/enrollments.service";
 import { ROUTES } from "@/constants";
 import { cn, formatNumber, formatPrice } from "@/lib/utils";
 import { useCart } from "@/features/cart/cart-context";
 import { useWishlist } from "@/features/wishlist/wishlist-context";
+import { useAuth } from "@/providers/auth-provider";
 import { useT } from "@/providers/locale-provider";
 
 function formatDuration(seconds: number) {
@@ -44,7 +47,34 @@ export function CourseDetail({ slug }: { slug: string }) {
   const router = useRouter();
   const cart = useCart();
   const wishlist = useWishlist();
+  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
   const t = useT();
+
+  // Allaqachon yozilgan foydalanuvchiga sotib olish tugmalari ko'rsatilmaydi.
+  const { data: enrolled } = useQuery({
+    queryKey: ["dashboard", "enrolled"],
+    queryFn: dashboardService.getEnrolled,
+    enabled: isAuthenticated,
+  });
+
+  // Bepul kursga yozilish — backendda enrollment yaratib learn'ga o'tadi.
+  const enrollMutation = useMutation({
+    mutationFn: (courseId: number) => enrollmentsService.enroll(courseId),
+    onSuccess: (_, courseId) => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["my-courses"] });
+      router.push(ROUTES.learn(courseId));
+    },
+  });
+
+  const enrollFree = (courseId: number) => {
+    if (!isAuthenticated) {
+      router.push(ROUTES.login);
+      return;
+    }
+    enrollMutation.mutate(courseId);
+  };
 
   if (isLoading) return <LoadingState className="min-h-[60vh]" />;
   if (isError || !course) return <ErrorState className="min-h-[60vh]" onRetry={() => refetch()} />;
@@ -224,10 +254,26 @@ export function CourseDetail({ slug }: { slug: string }) {
                 <div className="flex items-end gap-2">
                   <span className="text-3xl font-extrabold">{formatPrice(course.price)}</span>
                 </div>
-                {course.price === 0 ? (
+                {enrolled?.some((e) => e.course.id === course.id) ? (
                   <Button asChild className="mt-4 w-full" size="lg">
-                    <Link href={ROUTES.learn(course.id)}>{t("detail.enrollFree")}</Link>
+                    <Link href={ROUTES.learn(course.id)}>{t("dash.continueLearning")}</Link>
                   </Button>
+                ) : course.price === 0 ? (
+                  <>
+                    <Button
+                      className="mt-4 w-full"
+                      size="lg"
+                      disabled={enrollMutation.isPending}
+                      onClick={() => enrollFree(course.id)}
+                    >
+                      {t("detail.enrollFree")}
+                    </Button>
+                    {enrollMutation.isError && (
+                      <p className="mt-2 text-center text-xs text-destructive">
+                        {enrollMutation.error instanceof Error ? enrollMutation.error.message : "Failed to enroll"}
+                      </p>
+                    )}
+                  </>
                 ) : (
                   <>
                     <Button

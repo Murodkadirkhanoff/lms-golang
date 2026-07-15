@@ -598,6 +598,9 @@ export const messages: Record<string, Message> = {
   "learn.takeQuiz": { uz: "📝 Bo‘lim testini topshirish →", ru: "📝 Пройти тест раздела →", en: "📝 Take the section quiz →" },
   "learn.videoUnavailable": { uz: "Video hozircha mavjud emas", ru: "Видео пока недоступно", en: "Video is not available yet" },
   "learn.videoUnsupported": { uz: "Brauzeringiz videoni qo‘llab-quvvatlamaydi.", ru: "Ваш браузер не поддерживает видео.", en: "Your browser does not support video playback." },
+  "learn.lockedTitle": { uz: "Bu dars qulflangan", ru: "Этот урок заблокирован", en: "This lesson is locked" },
+  "learn.lockedDesc": { uz: "Darsni ko‘rish uchun kursni yoki alohida darsni sotib oling.", ru: "Купите курс или отдельный урок, чтобы посмотреть его.", en: "Purchase the course or this single lesson to watch it." },
+  "learn.lockedCta": { uz: "Kurs sahifasiga o‘tish", ru: "Перейти на страницу курса", en: "Go to course page" },
 
   // ── Quiz ──────────────────────────────────────────────────────────────────
   "quiz.exit": { uz: "Testdan chiqish", ru: "Выйти из теста", en: "Exit quiz" },

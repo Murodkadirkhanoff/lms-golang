@@ -18,20 +18,22 @@ import (
 const version = "1.0.0"
 
 type config struct {
-	port           int
-	envName        string
-	db             database.Config
-	jwtSecret      []byte
-	internalKey    string
-	trustedOrigins []string
-	authServiceURL string
+	port                 int
+	envName              string
+	db                   database.Config
+	jwtSecret            []byte
+	internalKey          string
+	trustedOrigins       []string
+	authServiceURL       string
+	enrollmentServiceURL string
 }
 
 type application struct {
-	config     config
-	logger     *slog.Logger
-	models     data.Models
-	authClient *svcclient.Client
+	config           config
+	logger           *slog.Logger
+	models           data.Models
+	authClient       *svcclient.Client
+	enrollmentClient *svcclient.Client
 	httperr.Responder
 }
 
@@ -48,7 +50,8 @@ func main() {
 		jwtSecret:      []byte(env.String("JWT_SECRET", "")),
 		internalKey:    env.String("INTERNAL_KEY", ""),
 		trustedOrigins: strings.Fields(env.String("CORS_TRUSTED_ORIGINS", "http://localhost:3000")),
-		authServiceURL: env.String("AUTH_SERVICE_URL", "http://localhost:4001"),
+		authServiceURL:       env.String("AUTH_SERVICE_URL", "http://localhost:4001"),
+		enrollmentServiceURL: env.String("ENROLLMENT_SERVICE_URL", "http://localhost:4003"),
 	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil)).With("service", "course")
@@ -76,11 +79,12 @@ func main() {
 	logger.Info("database migrations applied")
 
 	app := &application{
-		config:     cfg,
-		logger:     logger,
-		models:     data.NewModels(db),
-		authClient: svcclient.New(cfg.authServiceURL, cfg.internalKey),
-		Responder:  httperr.Responder{Logger: logger},
+		config:           cfg,
+		logger:           logger,
+		models:           data.NewModels(db),
+		authClient:       svcclient.New(cfg.authServiceURL, cfg.internalKey),
+		enrollmentClient: svcclient.New(cfg.enrollmentServiceURL, cfg.internalKey),
+		Responder:        httperr.Responder{Logger: logger},
 	}
 
 	srv := &http.Server{

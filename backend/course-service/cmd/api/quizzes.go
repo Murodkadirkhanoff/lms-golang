@@ -7,6 +7,7 @@ import (
 
 	"lms.chashma.uz/course-service/internal/data"
 	"lms.chashma.uz/pkg/jsonutil"
+	"lms.chashma.uz/pkg/middleware"
 	"lms.chashma.uz/pkg/validator"
 )
 
@@ -119,6 +120,88 @@ func (app *application) upsertQuizHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	err = jsonutil.WriteJSON(w, http.StatusOK, jsonutil.Envelope{"quiz": quiz}, nil)
+	if err != nil {
+		app.ServerError(w, r, err)
+	}
+}
+
+// submitQuizAttemptHandler — POST /v1/quizzes/{id}/attempts. {id} — kurs id.
+// Body: {"score": 0..100}. Baholash clientda (correctIndex ochiq), server
+// natijani tarix va analitika uchun saqlaydi.
+func (app *application) submitQuizAttemptHandler(w http.ResponseWriter, r *http.Request) {
+	courseID, err := jsonutil.ReadIDParam(r)
+	if err != nil {
+		app.NotFound(w, r)
+		return
+	}
+
+	// Quiz mavjudligini tekshiramiz — bo'lmagan kursga urinish yozilmaydi.
+	_, err = app.models.Quizzes.GetByCourseID(courseID)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.NotFound(w, r)
+		default:
+			app.ServerError(w, r, err)
+		}
+		return
+	}
+
+	var input struct {
+		Score int `json:"score"`
+	}
+
+	err = jsonutil.ReadJSON(w, r, &input)
+	if err != nil {
+		app.BadRequest(w, r, err)
+		return
+	}
+
+	v := validator.New()
+	v.Check(input.Score >= 0 && input.Score <= 100, "score", "must be between 0 and 100")
+	if !v.Valid() {
+		app.FailedValidation(w, r, v.Errors)
+		return
+	}
+
+	claims := middleware.ContextGetUser(r)
+
+	attempt := &data.QuizAttempt{
+		UserID:   claims.UserID,
+		CourseID: courseID,
+		Score:    input.Score,
+	}
+
+	err = app.models.Quizzes.InsertAttempt(attempt)
+	if err != nil {
+		app.ServerError(w, r, err)
+		return
+	}
+
+	err = jsonutil.WriteJSON(w, http.StatusCreated, jsonutil.Envelope{"attempt": attempt}, nil)
+	if err != nil {
+		app.ServerError(w, r, err)
+	}
+}
+
+// listQuizAttemptsHandler — GET /v1/quizzes/{id}/attempts. Foydalanuvchining
+// shu kursdagi o'z urinishlari (score history).
+func (app *application) listQuizAttemptsHandler(w http.ResponseWriter, r *http.Request) {
+	courseID, err := jsonutil.ReadIDParam(r)
+	if err != nil {
+		app.NotFound(w, r)
+		return
+	}
+
+	claims := middleware.ContextGetUser(r)
+
+	attempts, err := app.models.Quizzes.ListAttempts(claims.UserID, courseID)
+	if err != nil {
+		app.ServerError(w, r, err)
+		return
+	}
+
+	err = jsonutil.WriteJSON(w, http.StatusOK, jsonutil.Envelope{"attempts": attempts}, nil)
 	if err != nil {
 		app.ServerError(w, r, err)
 	}

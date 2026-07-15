@@ -35,7 +35,10 @@ type Category struct {
 	NameRu    string    `json:"nameRu"`
 	NameEn    string    `json:"nameEn"`
 	ParentID  *int64    `json:"parentId"`
-	Version   int       `json:"-"`
+	// Published kurslar soni (List'da to'ldiriladi; ota kategoriya uchun
+	// bolalarniki bilan birga).
+	CourseCount int `json:"courseCount"`
+	Version     int `json:"-"`
 }
 
 func ValidateCategory(v *validator.Validator, category *Category) {
@@ -107,10 +110,17 @@ func (m CategoryModel) Get(id int64) (*Category, error) {
 
 func (m CategoryModel) List() ([]*Category, error) {
 	query := `
-		SELECT id, created_at, slug, name_uz, name_ru, name_en, parent_id, version
-		FROM categories
-		WHERE deleted_at IS NULL
-		ORDER BY depth, id
+		SELECT c.id, c.created_at, c.slug, c.name_uz, c.name_ru, c.name_en, c.parent_id, c.version,
+		       COALESCE(cc.n, 0)
+		FROM categories c
+		LEFT JOIN (
+			SELECT category_id, COUNT(*) AS n
+			FROM courses
+			WHERE is_published = true AND deleted_at IS NULL AND category_id IS NOT NULL
+			GROUP BY category_id
+		) cc ON cc.category_id = c.id
+		WHERE c.deleted_at IS NULL
+		ORDER BY depth, c.id
 	`
 
 	rows, err := m.DB.Query(query)
@@ -132,11 +142,25 @@ func (m CategoryModel) List() ([]*Category, error) {
 			&category.NameEn,
 			&category.ParentID,
 			&category.Version,
+			&category.CourseCount,
 		)
 		if err != nil {
 			return nil, err
 		}
 		categories = append(categories, &category)
+	}
+
+	// Ota kategoriya soni = o'ziniki + bolalariniki (kurslar leaf'ga biriktiriladi).
+	byID := map[int64]*Category{}
+	for _, c := range categories {
+		byID[c.ID] = c
+	}
+	for _, c := range categories {
+		if c.ParentID != nil {
+			if parent, ok := byID[*c.ParentID]; ok {
+				parent.CourseCount += c.CourseCount
+			}
+		}
 	}
 
 	return categories, rows.Err()

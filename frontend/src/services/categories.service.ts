@@ -7,11 +7,11 @@ const delay = (ms = 300) => new Promise((r) => setTimeout(r, ms));
 // children. Courses are assigned to a child (leaf) category.
 const mockCategories: Category[] = [
   // Parents
-  { id: 1, slug: "development", nameEn: "Development", nameUz: "Dasturlash", nameRu: "Разработка", parentId: null },
-  { id: 2, slug: "design", nameEn: "Design", nameUz: "Dizayn", nameRu: "Дизайн", parentId: null },
-  { id: 3, slug: "business", nameEn: "Business", nameUz: "Biznes", nameRu: "Бизнес", parentId: null },
-  { id: 4, slug: "marketing", nameEn: "Marketing", nameUz: "Marketing", nameRu: "Маркетинг", parentId: null },
-  { id: 5, slug: "data-science", nameEn: "Data Science", nameUz: "Data Science", nameRu: "Наука о данных", parentId: null },
+  { id: 1, slug: "development", courseCount: 1240, nameEn: "Development", nameUz: "Dasturlash", nameRu: "Разработка", parentId: null },
+  { id: 2, slug: "design", courseCount: 680, nameEn: "Design", nameUz: "Dizayn", nameRu: "Дизайн", parentId: null },
+  { id: 3, slug: "business", courseCount: 540, nameEn: "Business", nameUz: "Biznes", nameRu: "Бизнес", parentId: null },
+  { id: 4, slug: "marketing", courseCount: 410, nameEn: "Marketing", nameUz: "Marketing", nameRu: "Маркетинг", parentId: null },
+  { id: 5, slug: "data-science", courseCount: 390, nameEn: "Data Science", nameUz: "Data Science", nameRu: "Наука о данных", parentId: null },
   // Children
   { id: 7, slug: "web-development", nameEn: "Web Development", nameUz: "Veb dasturlash", nameRu: "Веб-разработка", parentId: 1 },
   { id: 8, slug: "mobile-development", nameEn: "Mobile Development", nameUz: "Mobil dasturlash", nameRu: "Мобильная разработка", parentId: 1 },

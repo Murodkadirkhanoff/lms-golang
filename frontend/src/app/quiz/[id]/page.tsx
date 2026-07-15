@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Clock, CheckCircle2, XCircle, RotateCcw, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -11,23 +11,48 @@ import { LoadingState } from "@/components/shared/states";
 import { quizService } from "@/services/quiz.service";
 import { ROUTES } from "@/constants";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/providers/auth-provider";
 import { useT } from "@/providers/locale-provider";
 
-const history = [
-  { date: "Jun 14, 2026", score: 80 },
-  { date: "Jun 10, 2026", score: 60 },
-];
+function attemptDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en", { month: "short", day: "numeric", year: "numeric" });
+}
 
 export default function QuizPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const t = useT();
+  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
   const { data: quiz, isLoading } = useQuery({ queryKey: ["quiz", id], queryFn: () => quizService.getById(id) });
+
+  // Oldingi urinishlar tarixi (score history) — backenddan.
+  const { data: history } = useQuery({
+    queryKey: ["quiz-attempts", id],
+    queryFn: () => quizService.listAttempts(id),
+    enabled: isAuthenticated,
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: (score: number) => quizService.submitAttempt(id, score),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["quiz-attempts", id] }),
+  });
 
   const [started, setStarted] = useState(false);
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
+
+  // Yakunlash: natijani hisoblab, tarix uchun backendga yozadi
+  // (Submit tugmasi ham, vaqt tugashi ham shu yo'ldan o'tadi).
+  const finish = () => {
+    if (submitted || !quiz) return;
+    setSubmitted(true);
+    const finalScore = Math.round(
+      (quiz.questions.filter((q) => answers[q.id] === q.correctIndex).length / quiz.questions.length) * 100,
+    );
+    if (isAuthenticated) submitMutation.mutate(finalScore);
+  };
 
   useEffect(() => {
     if (quiz && started) setTimeLeft(quiz.timeLimitMinutes * 60);
@@ -36,11 +61,12 @@ export default function QuizPage({ params }: { params: Promise<{ id: string }> }
   useEffect(() => {
     if (!started || submitted) return;
     if (timeLeft <= 0) {
-      setSubmitted(true);
+      finish();
       return;
     }
     const t = setInterval(() => setTimeLeft((s) => s - 1), 1000);
     return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [started, submitted, timeLeft]);
 
   if (isLoading || !quiz) return <LoadingState className="min-h-screen" />;
@@ -86,19 +112,21 @@ export default function QuizPage({ params }: { params: Promise<{ id: string }> }
               <Button size="lg" onClick={() => setStarted(true)}>
                 {t("quiz.start")}
               </Button>
-              <div>
-                <h3 className="mb-2 text-sm font-semibold">{t("quiz.scoreHistory")}</h3>
-                <div className="space-y-2">
-                  {history.map((h) => (
-                    <div key={h.date} className="flex items-center justify-between rounded-lg bg-secondary/60 px-3 py-2 text-sm">
-                      <span className="text-muted-foreground">{h.date}</span>
-                      <span className={cn("font-semibold", h.score >= quiz.passingScore ? "text-emerald-600" : "text-rose-600")}>
-                        {h.score}%
-                      </span>
-                    </div>
-                  ))}
+              {(history ?? []).length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-sm font-semibold">{t("quiz.scoreHistory")}</h3>
+                  <div className="space-y-2">
+                    {(history ?? []).map((h) => (
+                      <div key={h.id} className="flex items-center justify-between rounded-lg bg-secondary/60 px-3 py-2 text-sm">
+                        <span className="text-muted-foreground">{attemptDate(h.createdAt)}</span>
+                        <span className={cn("font-semibold", h.score >= quiz.passingScore ? "text-emerald-600" : "text-rose-600")}>
+                          {h.score}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -147,7 +175,7 @@ export default function QuizPage({ params }: { params: Promise<{ id: string }> }
                 {current < quiz.questions.length - 1 ? (
                   <Button onClick={() => setCurrent((c) => c + 1)}>{t("quiz.next")}</Button>
                 ) : (
-                  <Button onClick={() => setSubmitted(true)}>{t("quiz.submit")}</Button>
+                  <Button onClick={finish}>{t("quiz.submit")}</Button>
                 )}
               </div>
             </CardContent>

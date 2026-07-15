@@ -1,14 +1,15 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CheckCircle2,
   ChevronDown,
   Download,
   FileText,
+  Lock,
   PlayCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,21 +20,57 @@ import { Markdown } from "@/components/shared/markdown";
 import { VideoPlayer } from "@/components/shared/video-player";
 import { LoadingState } from "@/components/shared/states";
 import { coursesService } from "@/services/courses.service";
+import { dashboardService } from "@/services/dashboard.service";
+import { enrollmentsService } from "@/services/enrollments.service";
 import { ROUTES } from "@/constants";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/providers/auth-provider";
 import { useT } from "@/providers/locale-provider";
 
 export default function LearnPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const t = useT();
+  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
   const { data: course, isLoading } = useQuery({
     queryKey: ["learn", id],
     queryFn: () => coursesService.getById(id),
   });
 
+  // Enrollment yozuvi progress saqlash uchun kerak (PATCH /enrollments/{id}/progress).
+  const { data: enrolled } = useQuery({
+    queryKey: ["dashboard", "enrolled"],
+    queryFn: dashboardService.getEnrolled,
+    enabled: isAuthenticated,
+  });
+  const enrollment = enrolled?.find((e) => e.course.id === Number(id));
+
   const allLessons = useMemo(() => (course?.modules ?? []).flatMap((m) => m.lessons), [course]);
   const [activeLessonId, setActiveLessonId] = useState<number | null>(null);
   const [completed, setCompleted] = useState<Set<number>>(new Set());
+
+  // Serverda saqlangan progress formaning boshlang'ich holatiga qo'shiladi.
+  useEffect(() => {
+    const ids = enrollment?.completedLessonIds;
+    if (ids && ids.length > 0) {
+      setCompleted((prev) => new Set([...prev, ...ids]));
+    }
+  }, [enrollment?.completedLessonIds]);
+
+  const progressMutation = useMutation({
+    mutationFn: (lessonId: number) =>
+      enrollmentsService.updateProgress(enrollment!.enrollmentId, lessonId, true),
+    onSuccess: () => {
+      // Dashboard/sertifikatlar yangilansin (kurs tugasa sertifikat beriladi).
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["my-courses"] });
+    },
+  });
+
+  const markComplete = (lessonId: number) => {
+    setCompleted((prev) => new Set(prev).add(lessonId));
+    if (enrollment) progressMutation.mutate(lessonId);
+  };
 
   if (isLoading || !course) return <LoadingState className="min-h-screen" />;
 
@@ -68,8 +105,21 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
       <div className="flex flex-col lg:flex-row">
         {/* Main */}
         <main className="min-w-0 flex-1">
-          {/* Lesson content: video player or text article */}
-          {activeLesson?.type === "text" ? (
+          {/* Lesson content: locked paywall panel, video player or text article */}
+          {activeLesson?.locked ? (
+            <div className="grid aspect-video place-items-center bg-slate-900 px-6 text-center text-white">
+              <div>
+                <div className="mx-auto grid size-14 place-items-center rounded-full bg-white/10">
+                  <Lock className="size-7" />
+                </div>
+                <h2 className="mt-4 text-lg font-bold">{t("learn.lockedTitle")}</h2>
+                <p className="mt-1 text-sm text-slate-300">{t("learn.lockedDesc")}</p>
+                <Button asChild className="mt-4">
+                  <Link href={ROUTES.course(course.slug)}>{t("learn.lockedCta")}</Link>
+                </Button>
+              </div>
+            </div>
+          ) : activeLesson?.type === "text" ? (
             <article className="mx-auto max-w-3xl px-6 py-8">
               <Markdown>{activeLesson.content ?? ""}</Markdown>
             </article>
@@ -87,8 +137,8 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
                 </p>
               </div>
               <Button
-                onClick={() => activeLesson && setCompleted((prev) => new Set(prev).add(activeLesson.id))}
-                disabled={!!activeLesson && !!isDone(activeLesson.id)}
+                onClick={() => activeLesson && markComplete(activeLesson.id)}
+                disabled={!!activeLesson && (!!isDone(activeLesson.id) || !!activeLesson.locked)}
                 className="shrink-0 bg-emerald-600 hover:bg-emerald-700"
               >
                 <CheckCircle2 className="size-4" />
@@ -168,6 +218,8 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
                   >
                     {done ? (
                       <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
+                    ) : lesson.locked ? (
+                      <Lock className={cn("size-4 shrink-0", active ? "text-primary" : "text-slate-400")} />
                     ) : lesson.type === "text" ? (
                       <FileText className={cn("size-4 shrink-0", active ? "text-primary" : "text-slate-400")} />
                     ) : (

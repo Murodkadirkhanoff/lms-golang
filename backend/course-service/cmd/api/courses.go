@@ -86,10 +86,50 @@ func (app *application) showCourseHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	app.decorateCourses(r.Context(), []*data.Course{course})
+	app.sanitizeCourseContent(r, course)
 
 	err = jsonutil.WriteJSON(w, http.StatusOK, jsonutil.Envelope{"course": course}, nil)
 	if err != nil {
 		app.ServerError(w, r, err)
+	}
+}
+
+// sanitizeCourseContent — paywall: bepul bo'lmagan darslarning kontentini
+// (content / contentUrl) kirish huquqi bo'lmagan so'rovchidan yashiradi.
+// Kirish huquqi enrollment-service'dagi lesson_access jadvalidan so'raladi.
+// Kurs egasi va admin to'liq ko'radi. Enrollment-service javob bermasa —
+// fail closed: faqat bepul darslar ochiq qoladi.
+func (app *application) sanitizeCourseContent(r *http.Request, course *data.Course) {
+	if len(course.Modules) == 0 || app.canModifyCourse(r, course) {
+		return
+	}
+
+	accessible := map[int64]bool{}
+	claims := middleware.ContextGetUser(r)
+	if claims != nil {
+		var response struct {
+			LessonIDs []int64 `json:"lessonIds"`
+		}
+		err := app.enrollmentClient.Get(r.Context(),
+			fmt.Sprintf("/internal/access?user_id=%d&course_id=%d", claims.UserID, course.ID),
+			&response)
+		if err != nil {
+			app.logger.Warn("paywall: failed to fetch lesson access", "error", err.Error())
+		}
+		for _, id := range response.LessonIDs {
+			accessible[id] = true
+		}
+	}
+
+	for _, module := range course.Modules {
+		for _, lesson := range module.Lessons {
+			if lesson.IsFree || accessible[lesson.ID] {
+				continue
+			}
+			lesson.Content = ""
+			lesson.ContentURL = ""
+			lesson.Locked = true
+		}
 	}
 }
 

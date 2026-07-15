@@ -336,9 +336,9 @@ export const notifications: import("@/types").Notification[] = [
 ];
 
 export const enrolledCourses: EnrolledCourse[] = [
-  { course: courses[0], progress: 33, currentLesson: "Nested routes & layouts", lessonsCompleted: 14 },
-  { course: courses[1], progress: 73, currentLesson: "Design Systems", lessonsCompleted: 22 },
-  { course: courses[2], progress: 18, currentLesson: "Metrics that matter", lessonsCompleted: 5 },
+  { enrollmentId: 1, course: courses[0], progress: 33, currentLesson: "Nested routes & layouts", lessonsCompleted: 14 },
+  { enrollmentId: 2, course: courses[1], progress: 73, currentLesson: "Design Systems", lessonsCompleted: 22 },
+  { enrollmentId: 3, course: courses[2], progress: 18, currentLesson: "Metrics that matter", lessonsCompleted: 5 },
 ];
 
 export const certificates: Certificate[] = [
