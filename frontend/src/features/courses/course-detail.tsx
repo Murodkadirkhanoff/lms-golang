@@ -29,6 +29,8 @@ import { ROUTES } from "@/constants";
 import { cn, formatNumber, formatPrice } from "@/lib/utils";
 import { useCart } from "@/features/cart/cart-context";
 import { useWishlist } from "@/features/wishlist/wishlist-context";
+import { useCategoryName } from "./use-category-name";
+import { ReviewForm } from "./review-form";
 import { useAuth } from "@/providers/auth-provider";
 import { useT } from "@/providers/locale-provider";
 
@@ -50,6 +52,7 @@ export function CourseDetail({ slug }: { slug: string }) {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const t = useT();
+  const categoryName = useCategoryName();
 
   // Allaqachon yozilgan foydalanuvchiga sotib olish tugmalari ko'rsatilmaydi.
   const { data: enrolled } = useQuery({
@@ -70,7 +73,8 @@ export function CourseDetail({ slug }: { slug: string }) {
 
   const enrollFree = (courseId: number) => {
     if (!isAuthenticated) {
-      router.push(ROUTES.login);
+      // Login'dan keyin shu kurs sahifasiga qaytamiz.
+      router.push(`${ROUTES.login}?next=${encodeURIComponent(window.location.pathname)}`);
       return;
     }
     enrollMutation.mutate(courseId);
@@ -84,7 +88,7 @@ export function CourseDetail({ slug }: { slug: string }) {
       {/* Hero */}
       <section className="bg-slate-900 text-white">
         <div className="mx-auto max-w-7xl px-6 py-10">
-          <nav className="mb-3 text-xs text-slate-400">{t("detail.home")} / {t(`cat.${course.category.replace(/\s/g, "")}`)}</nav>
+          <nav className="mb-3 text-xs text-slate-400">{t("detail.home")} / {categoryName(course.category)}</nav>
           <div className="max-w-2xl">
             <h1 className="text-3xl font-extrabold leading-tight">{course.title}</h1>
             <p className="mt-3 text-slate-300">{course.description}</p>
@@ -220,6 +224,11 @@ export function CourseDetail({ slug }: { slug: string }) {
               </div>
             </div>
           </Card>
+
+          {/* Review yozish — faqat kursga yozilganlarga (backend ham tekshiradi) */}
+          {enrolled?.some((e) => e.course.id === course.id) && (
+            <ReviewForm courseId={course.id} slug={slug} />
+          )}
 
           {/* Reviews */}
           {course.reviews && course.reviews.length > 0 && (

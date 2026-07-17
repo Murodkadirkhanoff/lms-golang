@@ -27,7 +27,17 @@
       "Bash(pkill -f \"next-server\")",
       "Bash(echo \"EXIT:$?\")",
       "Read(//home/murodxonqodirxonov/.claude/projects/-home-murodxonqodirxonov-lms-golang/memory/**)",
-      "Bash(cat MEMORY.md)"
+      "Bash(cat MEMORY.md)",
+      "Bash(xargs wc -l)",
+      "Bash(java -version)",
+      "Bash(mvn -version)",
+      "Bash(docker --version)",
+      "Bash(curl -s https://start.spring.io/metadata/client -H 'Accept: application/json')",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\([v['id'] for v in d['bootVersion']['values']]\\); print\\(d['bootVersion']['default']\\)\")",
+      "Bash(mkdir -p backend-java)",
+      "Bash(curl -sf https://start.spring.io/starter.zip -d type=maven-project -d language=java -d bootVersion=4.0.7 -d javaVersion=25 -d groupId=uz.chashma.lms -d artifactId=auth-service -d name=auth-service -d packageName=uz.chashma.lms.auth -d dependencies=web,data-jpa,security,validation,flyway,postgresql -o starter.zip)",
+      "Bash(unzip -q starter.zip -d auth-service)",
+      "Bash(rm starter.zip)"
     ]
   }
 }

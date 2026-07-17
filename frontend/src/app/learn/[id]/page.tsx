@@ -22,6 +22,7 @@ import { LoadingState } from "@/components/shared/states";
 import { coursesService } from "@/services/courses.service";
 import { dashboardService } from "@/services/dashboard.service";
 import { enrollmentsService } from "@/services/enrollments.service";
+import { lessonsService } from "@/services/lessons.service";
 import { ROUTES } from "@/constants";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
@@ -160,33 +161,15 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
                 </TabsContent>
 
                 <TabsContent value="notes">
-                  <Textarea placeholder={t("learn.notePlaceholder")} rows={4} />
-                  <Button className="mt-3" size="sm">
-                    {t("learn.saveNote")}
-                  </Button>
+                  <NotesTab courseId={course.id} lessonId={activeLesson?.id ?? 0} />
                 </TabsContent>
 
                 <TabsContent value="resources">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {["lesson-starter.zip", "cheatsheet.pdf"].map((f) => (
-                      <a
-                        key={f}
-                        href="#"
-                        className="flex items-center gap-3 rounded-xl border p-3 hover:bg-secondary/50"
-                      >
-                        <FileText className="size-5 text-primary" />
-                        <span className="flex-1 truncate text-sm font-semibold">{f}</span>
-                        <Download className="size-4 text-muted-foreground" />
-                      </a>
-                    ))}
-                  </div>
+                  <ResourcesTab lesson={activeLesson} />
                 </TabsContent>
 
                 <TabsContent value="qa">
-                  <Textarea placeholder={t("learn.askPlaceholder")} rows={3} />
-                  <Button className="mt-3" size="sm">
-                    {t("learn.postQuestion")}
-                  </Button>
+                  <QaTab lessonId={activeLesson?.id ?? 0} locked={!!activeLesson?.locked} />
                 </TabsContent>
               </Tabs>
             </div>
@@ -242,6 +225,133 @@ export default function LearnPage({ params }: { params: Promise<{ id: string }> 
             </div>
           )}
         </aside>
+      </div>
+    </div>
+  );
+}
+
+/** Eslatmalar shaxsiy — localStorage'da dars kesimida saqlanadi. */
+function NotesTab({ courseId, lessonId }: { courseId: number; lessonId: number }) {
+  const t = useT();
+  const storageKey = `learn-note-${courseId}-${lessonId}`;
+  const [note, setNote] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setNote(localStorage.getItem(storageKey) ?? "");
+    setSaved(false);
+  }, [storageKey]);
+
+  const save = () => {
+    localStorage.setItem(storageKey, note);
+    setSaved(true);
+  };
+
+  return (
+    <div>
+      <Textarea
+        placeholder={t("learn.notePlaceholder")}
+        rows={4}
+        value={note}
+        onChange={(e) => {
+          setNote(e.target.value);
+          setSaved(false);
+        }}
+      />
+      <div className="mt-3 flex items-center gap-3">
+        <Button size="sm" onClick={save}>
+          {t("learn.saveNote")}
+        </Button>
+        {saved && <span className="text-xs text-emerald-600">{t("learn.noteSaved")}</span>}
+      </div>
+    </div>
+  );
+}
+
+/** Dars materiallari — hozircha darsning o'zi (video fayl / matn). */
+function ResourcesTab({ lesson }: { lesson?: { type: string; contentUrl?: string; title: string; locked?: boolean } }) {
+  const t = useT();
+
+  if (lesson && !lesson.locked && lesson.type === "video" && lesson.contentUrl) {
+    return (
+      <div className="grid gap-3 sm:grid-cols-2">
+        <a
+          href={lesson.contentUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-3 rounded-xl border p-3 hover:bg-secondary/50"
+        >
+          <FileText className="size-5 text-primary" />
+          <span className="flex-1 truncate text-sm font-semibold">{lesson.title}</span>
+          <Download className="size-4 text-muted-foreground" />
+        </a>
+      </div>
+    );
+  }
+
+  return <p className="text-sm text-muted-foreground">{t("learn.noResources")}</p>;
+}
+
+/** Q&A — savollar backendda saqlanadi (POST /lessons/{id}/questions). */
+function QaTab({ lessonId, locked }: { lessonId: number; locked: boolean }) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const [question, setQuestion] = useState("");
+  const [error, setError] = useState("");
+
+  const { data: questions } = useQuery({
+    queryKey: ["lesson-questions", lessonId],
+    queryFn: () => lessonsService.listQuestions(lessonId),
+    enabled: lessonId > 0 && !locked,
+  });
+
+  const mutation = useMutation({
+    mutationFn: () => lessonsService.askQuestion(lessonId, question.trim()),
+    onSuccess: () => {
+      setQuestion("");
+      queryClient.invalidateQueries({ queryKey: ["lesson-questions", lessonId] });
+    },
+    onError: (err) => setError(err instanceof Error ? err.message : t("common.somethingWrong")),
+  });
+
+  const timeAgo = (iso: string) => new Date(iso).toLocaleDateString();
+
+  return (
+    <div>
+      <Textarea
+        placeholder={t("learn.askPlaceholder")}
+        rows={3}
+        value={question}
+        onChange={(e) => setQuestion(e.target.value)}
+        disabled={locked}
+      />
+      {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
+      <Button
+        className="mt-3"
+        size="sm"
+        disabled={locked || mutation.isPending || !question.trim()}
+        onClick={() => {
+          setError("");
+          mutation.mutate();
+        }}
+      >
+        {mutation.isPending ? t("learn.posting") : t("learn.postQuestion")}
+      </Button>
+
+      <div className="mt-6 space-y-4">
+        {(questions ?? []).length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t("learn.noQuestions")}</p>
+        ) : (
+          (questions ?? []).map((q) => (
+            <div key={q.id} className="rounded-xl border p-4">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">{q.user}</span>
+                <span>{timeAgo(q.createdAt)}</span>
+              </div>
+              <p className="mt-2 text-sm">{q.question}</p>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

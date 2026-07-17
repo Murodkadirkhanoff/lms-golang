@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { FileText, GripVertical, Plus, Trash2, UploadCloud, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MarkdownEditor } from "@/components/shared/markdown-editor";
 import { EmptyState } from "@/components/shared/states";
+import { uploadsService } from "@/services/uploads.service";
 import { cn } from "@/lib/utils";
 import { useT } from "@/providers/locale-provider";
 import type { CourseFormValues } from "./course-schema";
@@ -117,6 +118,10 @@ function LessonRow({
     formState: { errors },
   } = useFormContext<CourseFormValues>();
   const fileInput = useRef<HTMLInputElement>(null);
+  // Video backendga darhol yuklanadi (POST /uploads); formaga tayyor URL yoziladi.
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadedName, setUploadedName] = useState("");
 
   const base = `modules.${moduleIndex}.lessons.${lessonIndex}` as const;
   const isFree = watch(`${base}.isFree`);
@@ -162,25 +167,43 @@ function LessonRow({
             <div className="space-y-2">
               <button
                 type="button"
+                disabled={uploadProgress !== null}
                 onClick={() => fileInput.current?.click()}
-                className="flex w-full flex-col items-center gap-1 rounded-lg border-2 border-dashed p-4 text-center hover:bg-secondary/40"
+                className="flex w-full flex-col items-center gap-1 rounded-lg border-2 border-dashed p-4 text-center hover:bg-secondary/40 disabled:opacity-60"
               >
                 <UploadCloud className="size-6 text-muted-foreground" />
                 <span className="max-w-full break-all text-sm font-medium">
-                  {contentUrl ? contentUrl : t("cb.uploadVideo")}
+                  {uploadProgress !== null
+                    ? t("cb.uploading", { p: uploadProgress })
+                    : contentUrl
+                      ? uploadedName || contentUrl
+                      : t("cb.uploadVideo")}
                 </span>
                 <span className="text-xs text-muted-foreground">{t("cb.uploadHint")}</span>
               </button>
               <input
                 ref={fileInput}
                 type="file"
-                accept="video/*"
+                accept="video/mp4,video/webm,video/quicktime"
                 className="hidden"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files?.[0];
-                  if (file) setValue(`${base}.contentUrl`, file.name, { shouldValidate: true });
+                  e.target.value = "";
+                  if (!file) return;
+                  setUploadError("");
+                  setUploadProgress(0);
+                  try {
+                    const result = await uploadsService.upload(file, "video", setUploadProgress);
+                    setUploadedName(result.filename);
+                    setValue(`${base}.contentUrl`, result.url, { shouldValidate: true });
+                  } catch (err) {
+                    setUploadError(err instanceof Error ? err.message : t("common.somethingWrong"));
+                  } finally {
+                    setUploadProgress(null);
+                  }
                 }}
               />
+              {uploadError && <p className="text-xs text-destructive">{uploadError}</p>}
               {lessonErrors?.contentUrl && (
                 <p className="text-xs text-destructive">{lessonErrors.contentUrl.message}</p>
               )}

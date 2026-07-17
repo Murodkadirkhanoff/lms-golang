@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, BookOpen, CheckCheck, Megaphone, MessageSquare, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -36,8 +36,30 @@ export default function NotificationsPage() {
     if (query.data) setItems(query.data);
   }, [query.data]);
 
+  const queryClient = useQueryClient();
   const unread = items.filter((n) => !n.read).length;
-  const markAllRead = () => setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+
+  // Optimistik: UI darhol yangilanadi, server bilan sinxronlash fonda;
+  // navbar badge ham ["notifications"] cache orqali yangilanadi.
+  const markAllMutation = useMutation({
+    mutationFn: notificationsService.markAllRead,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+  const markOneMutation = useMutation({
+    mutationFn: (id: number) => notificationsService.markRead(id),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+
+  const markAllRead = () => {
+    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    markAllMutation.mutate();
+  };
+
+  const markOneRead = (id: number, alreadyRead: boolean) => {
+    if (alreadyRead) return;
+    setItems((prev) => prev.map((x) => (x.id === id ? { ...x, read: true } : x)));
+    markOneMutation.mutate(id);
+  };
 
   return (
     <div className="space-y-6">
@@ -73,7 +95,7 @@ export default function NotificationsPage() {
             return (
               <button
                 key={n.id}
-                onClick={() => setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)))}
+                onClick={() => markOneRead(n.id, n.read)}
                 className={cn(
                   "flex w-full items-start gap-4 px-5 py-4 text-left transition-colors hover:bg-secondary/40",
                   !n.read && "bg-accent/30",

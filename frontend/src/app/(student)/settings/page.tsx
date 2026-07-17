@@ -1,21 +1,16 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { CreditCard, Plus, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { LANGUAGES } from "@/constants";
+import { authService } from "@/services/auth.service";
+import { useAuth, initials } from "@/providers/auth-provider";
+import { useToast } from "@/providers/toast-provider";
 import { useT } from "@/providers/locale-provider";
 
 const NOTIFICATION_PREFS = [
@@ -32,6 +27,48 @@ const PAYMENT_METHODS = [
 
 export default function SettingsPage() {
   const t = useT();
+  const toast = useToast();
+  const { user, setUser } = useAuth();
+
+  const [name, setName] = useState("");
+  const [currentPass, setCurrentPass] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
+  const [passError, setPassError] = useState("");
+
+  useEffect(() => {
+    if (user) setName(user.name);
+  }, [user]);
+
+  const nameMutation = useMutation({
+    mutationFn: () => authService.updateProfile(name.trim()),
+    onSuccess: (updated) => {
+      setUser(updated);
+      toast.success(t("profile.saved"));
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : t("common.somethingWrong")),
+  });
+
+  const passwordMutation = useMutation({
+    mutationFn: () => authService.changePassword(currentPass, newPass),
+    onSuccess: () => {
+      toast.success(t("profile.passUpdated"));
+      setCurrentPass("");
+      setNewPass("");
+      setConfirmPass("");
+    },
+    onError: (err) => setPassError(err instanceof Error ? err.message : t("common.somethingWrong")),
+  });
+
+  const submitPassword = () => {
+    setPassError("");
+    if (newPass !== confirmPass) {
+      setPassError(t("profile.passMismatch"));
+      return;
+    }
+    passwordMutation.mutate();
+  };
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
@@ -51,41 +88,24 @@ export default function SettingsPage() {
         <TabsContent value="account">
           <Card className="p-6">
             <div className="flex items-center gap-4">
-              <div className="size-16 rounded-full bg-indigo-200" />
+              <div className="grid size-16 place-items-center rounded-full bg-indigo-200 text-lg font-bold text-indigo-700">
+                {user ? initials(user.name) : ""}
+              </div>
               <div>
-                <Button variant="outline" size="sm">{t("settings.changePhoto")}</Button>
-                <p className="mt-1 text-xs text-muted-foreground">{t("settings.photoHint")}</p>
+                <p className="font-semibold">{user?.name}</p>
+                <p className="text-xs text-muted-foreground">{user?.email}</p>
               </div>
             </div>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <FormField label={t("profile.fullName")} name="name" defaultValue="Amir Karimov" />
-              <FormField label={t("profile.email")} name="email" type="email" defaultValue="amir@example.com" />
-              <div className="sm:col-span-2">
-                <FormField label={t("profile.headline")} name="headline" defaultValue="Frontend Developer · Lifelong learner" />
-              </div>
-              <div className="sm:col-span-2 space-y-1.5">
-                <Label htmlFor="bio">{t("settings.bio")}</Label>
-                <Textarea id="bio" rows={4} defaultValue="Building delightful web experiences and always learning something new." />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t("settings.prefLanguage")}</Label>
-                <Select defaultValue="en">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LANGUAGES.map((l) => (
-                      <SelectItem key={l.value} value={l.value}>
-                        {l.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <FormField label={t("profile.fullName")} name="name" value={name}
+                         onChange={(e) => setName(e.target.value)} />
+              {/* Email — login identifikatori, o'zgartirilmaydi */}
+              <FormField label={t("profile.email")} name="email" type="email" value={user?.email ?? ""} disabled />
             </div>
-            <div className="mt-6 flex justify-end gap-2">
-              <Button variant="outline">{t("common.cancel")}</Button>
-              <Button>{t("common.saveChanges")}</Button>
+            <div className="mt-6 flex justify-end">
+              <Button onClick={() => nameMutation.mutate()} disabled={nameMutation.isPending || !name.trim()}>
+                {nameMutation.isPending ? t("cf.saving") : t("common.saveChanges")}
+              </Button>
             </div>
           </Card>
         </TabsContent>
@@ -95,12 +115,17 @@ export default function SettingsPage() {
           <Card className="p-6">
             <h2 className="font-bold">{t("settings.changePassword")}</h2>
             <div className="mt-4 grid gap-4">
-              <FormField label={t("profile.currentPass")} name="current" type="password" />
-              <FormField label={t("profile.newPass")} name="new" type="password" />
-              <FormField label={t("profile.confirmPass")} name="confirm" type="password" />
+              <FormField label={t("profile.currentPass")} name="current" type="password" value={currentPass}
+                         onChange={(e) => setCurrentPass(e.target.value)} />
+              <FormField label={t("profile.newPass")} name="new" type="password" value={newPass}
+                         onChange={(e) => setNewPass(e.target.value)} />
+              <FormField label={t("profile.confirmPass")} name="confirm" type="password" value={confirmPass}
+                         onChange={(e) => setConfirmPass(e.target.value)} error={passError || undefined} />
             </div>
             <div className="mt-4 flex justify-end">
-              <Button>{t("profile.updatePass")}</Button>
+              <Button onClick={submitPassword} disabled={passwordMutation.isPending || !currentPass || !newPass}>
+                {passwordMutation.isPending ? t("cf.saving") : t("profile.updatePass")}
+              </Button>
             </div>
           </Card>
 

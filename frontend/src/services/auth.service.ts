@@ -87,6 +87,35 @@ export const authService = {
     return data;
   },
 
+  /** PUT /me/profile — ismni yangilaydi va localStorage'dagi userni sinxronlaydi. */
+  async updateProfile(name: string): Promise<User> {
+    if (USE_MOCK) {
+      await delay();
+      const stored = getStoredUser();
+      const updated = { ...(stored ?? { id: 1, email: "", createdAt: "" }), name } as User;
+      localStorage.setItem(USER_KEY, JSON.stringify(updated));
+      return updated;
+    }
+    const { data } = await api.put("/me/profile", { name });
+    if (typeof window !== "undefined") {
+      localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+    }
+    return data.user;
+  },
+
+  /** PUT /me/password — joriy parol tasdig'i bilan almashtirish. */
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+    if (USE_MOCK) {
+      await delay();
+      return { message: "Password updated" };
+    }
+    const { data } = await api.put("/me/password", {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
+    return data;
+  },
+
   logout() {
     if (typeof window === "undefined") return;
     localStorage.removeItem("token");

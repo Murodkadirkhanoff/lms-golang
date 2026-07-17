@@ -3,8 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import {
   Award,
+  Bell,
   BookOpen,
   GraduationCap,
   Heart,
@@ -42,6 +44,7 @@ import { ROUTES } from "@/constants";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/features/cart/cart-context";
 import { useWishlist } from "@/features/wishlist/wishlist-context";
+import { notificationsService } from "@/services/notifications.service";
 import { useAuth, initials } from "@/providers/auth-provider";
 import { useToast } from "@/providers/toast-provider";
 import { useT } from "@/providers/locale-provider";
@@ -83,6 +86,16 @@ export function Navbar() {
 
   const navLinks = user ? [...publicNavLinks, ...authedNavLinks] : publicNavLinks;
   const menuLinks = user?.role === "admin" ? [...accountLinks, adminLink] : accountLinks;
+
+  // Bell badge — o'qilmagan bildirishnomalar soni (bir daqiqada yangilanadi).
+  const { data: notificationItems } = useQuery({
+    queryKey: ["notifications"],
+    queryFn: notificationsService.list,
+    enabled: !!user,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const unreadCount = (notificationItems ?? []).filter((n) => !n.read).length;
 
   const submitSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,6 +206,11 @@ export function Navbar() {
           <IconLink href={ROUTES.cart} label={t("nav.cart")} count={cart.count}>
             <ShoppingCart className="size-5" />
           </IconLink>
+          {user && (
+            <IconLink href={ROUTES.notifications} label={t("nav.notifications")} count={unreadCount}>
+              <Bell className="size-5" />
+            </IconLink>
+          )}
 
           {user ? (
             <DropdownMenu>

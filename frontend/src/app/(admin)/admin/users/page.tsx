@@ -1,16 +1,48 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/shared/data-table";
+import { Pagination } from "@/components/shared/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { adminService, type AdminUser } from "@/services/admin.service";
+import { useAuth } from "@/providers/auth-provider";
+import { useToast } from "@/providers/toast-provider";
 import { formatDate } from "@/lib/utils";
 import { useT } from "@/providers/locale-provider";
 
+const ROLES: AdminUser["role"][] = ["student", "instructor", "admin"];
+
 export default function AdminUsersPage() {
   const t = useT();
-  const { data, isLoading } = useQuery({ queryKey: ["admin", "users"], queryFn: adminService.getUsers });
+  const toast = useToast();
+  const { user: me } = useAuth();
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin", "users", page],
+    queryFn: () => adminService.getUsers(page, pageSize),
+    placeholderData: keepPreviousData,
+  });
+
+  const roleMutation = useMutation({
+    mutationFn: ({ id, role }: { id: number; role: AdminUser["role"] }) =>
+      adminService.updateRole(id, role),
+    onSuccess: () => {
+      toast.success(t("admin.roleUpdated"));
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : t("common.somethingWrong")),
+  });
 
   const columns: Column<AdminUser>[] = [
     {
@@ -25,6 +57,31 @@ export default function AdminUsersPage() {
           </div>
         </div>
       ),
+    },
+    {
+      key: "role",
+      header: t("admin.colRole"),
+      render: (u) =>
+        // Admin o'z rolini o'zgartira olmaydi (backend ham rad etadi).
+        u.id === me?.id ? (
+          <Badge variant="secondary">{u.role}</Badge>
+        ) : (
+          <Select
+            value={u.role}
+            onValueChange={(role) => roleMutation.mutate({ id: u.id, role: role as AdminUser["role"] })}
+          >
+            <SelectTrigger className="h-8 w-32 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ROLES.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {r}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ),
     },
     {
       key: "activity",
@@ -42,22 +99,15 @@ export default function AdminUsersPage() {
       render: (u) =>
         u.status === "active" ? <Badge variant="success">{t("admin.active")}</Badge> : <Badge variant="destructive">{t("admin.suspended")}</Badge>,
     },
-    {
-      key: "actions",
-      header: t("admin.colActions"),
-      align: "right",
-      render: (u) => (
-        <Button variant="ghost" size="sm" className={u.status === "active" ? "text-rose-600" : "text-emerald-600"}>
-          {u.status === "active" ? t("admin.suspend") : t("admin.restore")}
-        </Button>
-      ),
-    },
   ];
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-extrabold">{t("admin.userManagement")}</h1>
-      <DataTable columns={columns} data={data ?? []} isLoading={isLoading} rowKey={(u) => u.id} />
+      <DataTable columns={columns} data={data?.items ?? []} isLoading={isLoading} rowKey={(u) => u.id} />
+      {data && (
+        <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onPageChange={setPage} />
+      )}
     </div>
   );
 }

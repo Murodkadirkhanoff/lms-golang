@@ -21,4 +21,14 @@ export const notificationsService = {
     }
     await api.post("/me/notifications/read-all");
   },
+
+  async markRead(id: number): Promise<void> {
+    if (USE_MOCK) {
+      await delay(200);
+      const n = notifications.find((x) => x.id === id);
+      if (n) n.read = true;
+      return;
+    }
+    await api.post(`/me/notifications/${id}/read`);
+  },
 };

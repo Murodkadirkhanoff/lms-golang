@@ -73,9 +73,10 @@ export interface Course {
   title: string;
   description: string;
   thumbnailColor: string;
+  /** Yuklangan rasm URL'i; bo'sh bo'lsa thumbnailColor gradienti ko'rsatiladi. */
+  thumbnailUrl?: string;
   categoryId?: number | null;
   category: string;
-  categoryId?: number | null;
   lang: Lang;
   price: number;
   rating: number;

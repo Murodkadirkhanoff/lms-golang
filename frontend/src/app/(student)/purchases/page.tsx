@@ -1,11 +1,13 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/shared/states";
+import { Pagination } from "@/components/shared/pagination";
 import { ordersService } from "@/services/orders.service";
 import { formatDate, formatPrice } from "@/lib/utils";
 import { useT } from "@/providers/locale-provider";
@@ -19,7 +21,12 @@ const STATUS_VARIANT: Record<OrderStatus, "success" | "secondary" | "warning"> =
 
 export default function PurchasesPage() {
   const t = useT();
-  const orders = useQuery({ queryKey: ["orders"], queryFn: ordersService.list });
+  const [page, setPage] = useState(1);
+  const orders = useQuery({
+    queryKey: ["orders", page],
+    queryFn: () => ordersService.list(page),
+    placeholderData: keepPreviousData,
+  });
 
   return (
     <div className="space-y-6">
@@ -32,11 +39,11 @@ export default function PurchasesPage() {
         <LoadingState className="min-h-[40vh]" />
       ) : orders.isError ? (
         <ErrorState onRetry={() => orders.refetch()} />
-      ) : !orders.data || orders.data.length === 0 ? (
+      ) : !orders.data || orders.data.items.length === 0 ? (
         <EmptyState title={t("purchases.emptyTitle")} description={t("purchases.emptyDesc")} />
       ) : (
         <div className="space-y-4">
-          {orders.data.map((order) => (
+          {orders.data.items.map((order) => (
             <Card key={order.id} className="overflow-hidden">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-secondary/40 px-5 py-3">
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
@@ -71,6 +78,12 @@ export default function PurchasesPage() {
               </ul>
             </Card>
           ))}
+          <Pagination
+            page={orders.data.page}
+            pageSize={orders.data.pageSize}
+            total={orders.data.total}
+            onPageChange={setPage}
+          />
         </div>
       )}
     </div>

@@ -1,0 +1,90 @@
+# To'liq stack: Postgres + Java backend (:4000) + Next.js frontend (:3000).
+# Ishga tushirish:  docker compose up -d --build
+# Sozlamalar `.env` faylidan olinadi (namuna: .env.example).
+name: lms
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: lms
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-devpassword}
+      # POSTGRES_DB berilmagan — default baza nomi user bilan bir xil: lms
+    ports:
+      - "5432:5432" # lokal psql/DBeaver uchun; prod/k8s'da ochilmaydi
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lms -d lms"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Dev SMTP: xatlar hech qayerga ketmaydi, http://localhost:8025 da ko'rinadi
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "8025:8025" # web UI (SMTP 1025 faqat ichki tarmoqda)
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build: backend-java/lms
+    environment:
+      LMS_DB_URL: jdbc:postgresql://db:5432/lms
+      LMS_DB_USER: lms
+      LMS_DB_PASSWORD: ${DB_PASSWORD:-devpassword}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET .env faylida berilishi shart}
+      JWT_TTL: ${JWT_TTL:-24h}
+      LMS_ENV: ${LMS_ENV:-development}
+      CORS_TRUSTED_ORIGINS: ${CORS_TRUSTED_ORIGINS:-http://localhost:3000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@lms.chashma.uz}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:4000}
+      UPLOADS_DIR: /app/uploads
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "4000:4000" # brauzer to'g'ridan-to'g'ri murojaat qiladi (NEXT_PUBLIC_API_URL)
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:4000/v1/healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+
+  frontend:
+    build:
+      context: frontend
+      args:
+        # NEXT_PUBLIC_* build paytida bundle'ga yoziladi — runtime env emas
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/v1}
+        NEXT_PUBLIC_USE_MOCK: "false"
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      # 127.0.0.1 — busybox wget localhost'ni IPv6 (::1) deb olishi mumkin,
+      # Next esa faqat IPv4 (0.0.0.0) da tinglaydi
+      test: ["CMD", "wget", "-qO/dev/null", "http://127.0.0.1:3000"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+
+volumes:
+  uploads:
+  pgdata:
+    # Eski Go stack'dan qolgan volume — mavjud lms bazasi (userlar, kurslar)
+    # saqlanadi. Toza bazadan boshlash uchun nomni o'zgartiring (mas. lms_pgdata).
+    name: backend_pgdata

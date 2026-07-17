@@ -14,10 +14,29 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Normalize the Go API's `{ error: ... }` envelope into thrown Error messages.
+// Normalize the API's `{ error: ... }` envelope into thrown Error messages.
+// A 401 with a stored token means the session expired: clear it and send the
+// user to login with the current page preserved (skipped for the login call
+// itself, where 401 just means wrong credentials).
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const status = error?.response?.status;
+    const url: string = error?.config?.url ?? "";
+    if (
+      status === 401 &&
+      typeof window !== "undefined" &&
+      localStorage.getItem("token") &&
+      !url.includes("/tokens/authentication")
+    ) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      if (!window.location.pathname.startsWith("/login")) {
+        const next = window.location.pathname + window.location.search;
+        window.location.href = `/login?next=${encodeURIComponent(next)}`;
+      }
+    }
+
     const payload = error?.response?.data?.error;
     const message =
       typeof payload === "string"

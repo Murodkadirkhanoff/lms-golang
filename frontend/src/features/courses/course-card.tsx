@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { ROUTES } from "@/constants";
 import { cn, formatNumber, formatPrice } from "@/lib/utils";
 import { useWishlist } from "@/features/wishlist/wishlist-context";
+import { useCategoryName } from "./use-category-name";
 import { useT } from "@/providers/locale-provider";
 import { useToast } from "@/providers/toast-provider";
 import type { Course } from "@/types";
@@ -14,6 +15,7 @@ import type { Course } from "@/types";
 export function CourseCard({ course }: { course: Course }) {
   const wishlist = useWishlist();
   const t = useT();
+  const categoryName = useCategoryName();
   const toast = useToast();
   const saved = wishlist.has(course.id);
 
@@ -32,9 +34,14 @@ export function CourseCard({ course }: { course: Course }) {
         >
           <Heart className={cn("size-4", saved && "fill-rose-500 text-rose-500")} />
         </button>
-        <div className={`aspect-video bg-gradient-to-br ${course.thumbnailColor}`} />
+        {course.thumbnailUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- yuklangan rasm manzili dinamik
+          <img src={course.thumbnailUrl} alt="" className="aspect-video w-full object-cover" />
+        ) : (
+          <div className={`aspect-video bg-gradient-to-br ${course.thumbnailColor}`} />
+        )}
         <div className="space-y-2 p-5">
-          <Badge>{t(`cat.${course.category.replace(/\s/g, "")}`)}</Badge>
+          <Badge>{categoryName(course.category)}</Badge>
           <h3 className="line-clamp-2 font-bold leading-snug group-hover:text-primary">{course.title}</h3>
           <p className="text-sm text-muted-foreground">{t("common.by")} {course.instructor.name}</p>
           <div className="flex items-center gap-1 text-sm">

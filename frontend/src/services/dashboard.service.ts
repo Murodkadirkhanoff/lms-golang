@@ -1,5 +1,5 @@
 import { api, USE_MOCK } from "@/lib/axios";
-import type { Certificate, EnrolledCourse, TeachingStats } from "@/types";
+import type { Certificate, EnrolledCourse, Paginated, TeachingStats } from "@/types";
 import { certificates, enrolledCourses } from "./mock/data";
 
 const delay = (ms = 400) => new Promise((r) => setTimeout(r, ms));
@@ -21,13 +21,30 @@ export const dashboardService = {
     return data;
   },
 
+  // Tekshiruvlar uchun (enrolled'mi, davom etish tugmasi): backend limiti
+  // doirasidagi eng katta sahifa. Ro'yxat sahifalari getEnrolledPage ishlatadi.
   async getEnrolled(): Promise<EnrolledCourse[]> {
     if (USE_MOCK) {
       await delay();
       return enrolledCourses;
     }
-    const { data } = await api.get("/me/courses");
+    const { data } = await api.get("/me/courses", { params: { pageSize: 100 } });
     return data.items;
+  },
+
+  async getEnrolledPage(page = 1, pageSize = 12): Promise<Paginated<EnrolledCourse>> {
+    if (USE_MOCK) {
+      await delay();
+      const start = (page - 1) * pageSize;
+      return {
+        items: enrolledCourses.slice(start, start + pageSize),
+        page,
+        pageSize,
+        total: enrolledCourses.length,
+      };
+    }
+    const { data } = await api.get("/me/courses", { params: { page, pageSize } });
+    return data;
   },
 
   async getCertificates(): Promise<Certificate[]> {
@@ -37,6 +54,21 @@ export const dashboardService = {
     }
     const { data } = await api.get("/me/certificates");
     return data.items;
+  },
+
+  /** PDF'ni auth header bilan olib, brauzerda yuklab olishni boshlaydi. */
+  async downloadCertificate(id: number): Promise<void> {
+    if (USE_MOCK) {
+      await delay(300);
+      return;
+    }
+    const { data } = await api.get(`/me/certificates/${id}/download`, { responseType: "blob" });
+    const url = URL.createObjectURL(data as Blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `certificate-${id}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
   },
 
   // Studio (instruktor) ko'rsatkichlari — GET /me/teaching/stats.

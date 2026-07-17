@@ -10,8 +10,10 @@ import { CourseCard } from "./course-card";
 import { CardGridSkeleton, EmptyState, ErrorState } from "@/components/shared/states";
 import { Pagination } from "@/components/shared/pagination";
 import { coursesService } from "@/services/courses.service";
-import { CATEGORIES, SORT_OPTIONS } from "@/constants";
-import { useT } from "@/providers/locale-provider";
+import { categoriesService } from "@/services/categories.service";
+import { SORT_OPTIONS } from "@/constants";
+import { useLocale } from "@/providers/locale-provider";
+import { localizedCategoryName } from "./use-category-name";
 import type { CourseQuery } from "@/types";
 
 const PAGE_SIZE = 8;
@@ -29,7 +31,7 @@ export function CourseCatalog({
   initialSort = "popular",
   initialPage = 1,
 }: CourseCatalogProps) {
-  const t = useT();
+  const { locale, t } = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const [search, setSearch] = useState(initialSearch);
@@ -58,6 +60,14 @@ export function CourseCatalog({
   }, [debouncedSearch, category, sort, page, pathname, router]);
 
   const query: CourseQuery = { search: debouncedSearch, category, sort, page, pageSize: PAGE_SIZE };
+
+  // Filtr real kategoriyalardan quriladi (qiymat — backend kutadigan slug).
+  const { data: allCategories } = useQuery({
+    queryKey: ["categories"],
+    queryFn: categoriesService.list,
+    staleTime: 5 * 60_000,
+  });
+  const parentCategories = (allCategories ?? []).filter((c) => c.parentId == null);
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["courses", query],
@@ -96,9 +106,9 @@ export function CourseCatalog({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="All">{t("catalog.allCategories")}</SelectItem>
-            {CATEGORIES.map((c) => (
-              <SelectItem key={c} value={c}>
-                {t(`cat.${c.replace(/\s/g, "")}`)}
+            {parentCategories.map((c) => (
+              <SelectItem key={c.slug} value={c.slug}>
+                {localizedCategoryName(c, locale)}
               </SelectItem>
             ))}
           </SelectContent>

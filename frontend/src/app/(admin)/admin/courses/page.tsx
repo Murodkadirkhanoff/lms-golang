@@ -5,12 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { coursesService } from "@/services/courses.service";
+import { useCategoryName } from "@/features/courses/use-category-name";
 import { formatNumber, formatPrice } from "@/lib/utils";
 import { useT } from "@/providers/locale-provider";
 import type { Course } from "@/types";
 
 export default function AdminCoursesPage() {
   const t = useT();
+  const categoryName = useCategoryName();
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "courses"],
     queryFn: () => coursesService.list({ pageSize: 50 }),
@@ -25,7 +27,7 @@ export default function AdminCoursesPage() {
           <div className={`h-9 w-12 rounded bg-gradient-to-br ${c.thumbnailColor}`} />
           <div>
             <div className="font-semibold">{c.title}</div>
-            <div className="text-xs text-muted-foreground">{t(`cat.${c.category.replace(/\s/g, "")}`)}</div>
+            <div className="text-xs text-muted-foreground">{categoryName(c.category)}</div>
           </div>
         </div>
       ),

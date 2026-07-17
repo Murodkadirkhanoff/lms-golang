@@ -27,6 +27,7 @@ export interface CreateModuleInput {
 export interface CreateCourseInput {
   title: string;
   description: string;
+  thumbnailUrl?: string;
   categoryId: number | null;
   lang: "uz" | "ru" | "en";
   price: number;
@@ -41,6 +42,7 @@ function toApiPayload(input: CreateCourseInput) {
   return {
     title: input.title,
     description: input.description,
+    thumbnail_url: input.thumbnailUrl ?? "",
     category_id: input.categoryId,
     lang: input.lang,
     price: input.price,
@@ -185,5 +187,14 @@ export const coursesService = {
     }
     const { data } = await api.patch(`/courses/${id}`, toApiPayload(input));
     return data.course;
+  },
+
+  /** Faqat kursga yozilgan foydalanuvchi uchun; qayta yuborilsa yangilanadi. */
+  async submitReview(courseId: number, rating: number, comment: string): Promise<void> {
+    if (USE_MOCK) {
+      await delay(400);
+      return;
+    }
+    await api.post(`/courses/${courseId}/reviews`, { rating, comment });
   },
 };

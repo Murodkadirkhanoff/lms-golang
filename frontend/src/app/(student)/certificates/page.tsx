@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Award, Download } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,10 @@ export default function CertificatesPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["certificates"],
     queryFn: dashboardService.getCertificates,
+  });
+
+  const download = useMutation({
+    mutationFn: (id: number) => dashboardService.downloadCertificate(id),
   });
 
   return (
@@ -39,7 +43,13 @@ export default function CertificatesPage() {
               <div className="p-5">
                 <h3 className="font-bold">{c.courseTitle}</h3>
                 <p className="mt-1 text-xs text-muted-foreground">{t("certs.issued", { date: formatDate(c.issuedAt) })}</p>
-                <Button variant="outline" size="sm" className="mt-4 w-full">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 w-full"
+                  disabled={download.isPending}
+                  onClick={() => download.mutate(c.id)}
+                >
                   <Download className="size-4" /> {t("certs.download")}
                 </Button>
               </div>

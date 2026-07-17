@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { CheckCircle2, PlayCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingState, ErrorState, EmptyState } from "@/components/shared/states";
+import { Pagination } from "@/components/shared/pagination";
 import { dashboardService } from "@/services/dashboard.service";
 import { ROUTES } from "@/constants";
 import { useT } from "@/providers/locale-provider";
@@ -19,9 +20,16 @@ type Filter = "all" | "in-progress" | "completed";
 export default function MyCoursesPage() {
   const t = useT();
   const [filter, setFilter] = useState<Filter>("all");
-  const enrolled = useQuery({ queryKey: ["my-courses"], queryFn: dashboardService.getEnrolled });
+  const [page, setPage] = useState(1);
+  const enrolled = useQuery({
+    queryKey: ["my-courses", page],
+    queryFn: () => dashboardService.getEnrolledPage(page),
+    placeholderData: keepPreviousData,
+  });
 
-  const all = enrolled.data ?? [];
+  // Filtr joriy sahifa ichida ishlaydi; umumiy son — serverdan.
+  const all = enrolled.data?.items ?? [];
+  const total = enrolled.data?.total ?? 0;
   const items = all.filter((e) =>
     filter === "all" ? true : filter === "completed" ? e.progress === 100 : e.progress < 100,
   );
@@ -35,7 +43,7 @@ export default function MyCoursesPage() {
 
       <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)}>
         <TabsList>
-          <TabsTrigger value="all">{t("mycourses.all", { n: all.length })}</TabsTrigger>
+          <TabsTrigger value="all">{t("mycourses.all", { n: total })}</TabsTrigger>
           <TabsTrigger value="in-progress">{t("mycourses.inProgress")}</TabsTrigger>
           <TabsTrigger value="completed">{t("mycourses.completed")}</TabsTrigger>
         </TabsList>
@@ -93,6 +101,15 @@ export default function MyCoursesPage() {
             );
           })}
         </div>
+      )}
+
+      {enrolled.data && (
+        <Pagination
+          page={enrolled.data.page}
+          pageSize={enrolled.data.pageSize}
+          total={enrolled.data.total}
+          onPageChange={setPage}
+        />
       )}
     </div>
   );

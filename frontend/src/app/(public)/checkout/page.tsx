@@ -25,7 +25,7 @@ const PAYMENT_METHODS = [
 export default function CheckoutPage() {
   const router = useRouter();
   const cart = useCart();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const t = useT();
   const [method, setMethod] = useState<string>("card");
@@ -61,7 +61,8 @@ export default function CheckoutPage() {
     e.preventDefault();
     setServerError("");
     if (!isAuthenticated) {
-      router.push(ROUTES.login);
+      // Login'dan keyin checkout'ga qaytamiz (savat saqlanadi).
+      router.push(`${ROUTES.login}?next=${encodeURIComponent(ROUTES.checkout)}`);
       return;
     }
     checkoutMutation.mutate();
@@ -92,10 +93,11 @@ export default function CheckoutPage() {
             <Card className="p-6">
               <h2 className="text-lg font-bold">{t("checkout.billing")}</h2>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <FormField label={t("checkout.fullName")} name="name" defaultValue="Amir Karimov" required />
-                <FormField label={t("checkout.email")} name="email" type="email" defaultValue="amir@example.com" required />
+                {/* key — login qilinganda user yuklangach prefill yangilansin */}
+                <FormField key={`n-${user?.id ?? 0}`} label={t("checkout.fullName")} name="name" defaultValue={user?.name ?? ""} required />
+                <FormField key={`e-${user?.id ?? 0}`} label={t("checkout.email")} name="email" type="email" defaultValue={user?.email ?? ""} required />
                 <FormField label={t("checkout.country")} name="country" defaultValue="Uzbekistan" required />
-                <FormField label={t("checkout.zip")} name="zip" defaultValue="100000" required />
+                <FormField label={t("checkout.zip")} name="zip" placeholder="100000" required />
               </div>
             </Card>
 

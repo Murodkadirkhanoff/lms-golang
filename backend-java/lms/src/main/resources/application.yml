@@ -1,0 +1,52 @@
+server:
+  port: ${LMS_PORT:4000}
+
+spring:
+  application:
+    name: lms
+  datasource:
+    url: ${LMS_DB_URL:jdbc:postgresql://localhost:5432/lms}
+    username: ${LMS_DB_USER:lms}
+    password: ${LMS_DB_PASSWORD:devpassword}
+    hikari:
+      maximum-pool-size: ${DB_MAX_OPEN_CONNS:25}
+  flyway:
+    # Har modul o'z schema'sida — keyin microservice'larga ajratish oson bo'ladi
+    schemas: auth, course, enrollment
+    create-schemas: true
+  jackson:
+    deserialization:
+      # Go jsonutil.ReadJSON DisallowUnknownFields ishlatadi — mos kelamiz
+      fail-on-unknown-properties: true
+  servlet:
+    multipart:
+      # Video yuklash uchun limitlar
+      max-file-size: ${MAX_UPLOAD_SIZE:512MB}
+      max-request-size: ${MAX_UPLOAD_SIZE:512MB}
+  mail:
+    # Bo'sh host = SMTP o'chirilgan (reset havolasi logga yoziladi).
+    # Compose'da Mailpit: SMTP_HOST=mailpit, SMTP_PORT=1025.
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+
+lms:
+  env: ${LMS_ENV:development}
+  jwt:
+    secret: ${JWT_SECRET:}
+    ttl: ${JWT_TTL:24h}
+  cors-trusted-origins: ${CORS_TRUSTED_ORIGINS:http://localhost:3000}
+  # Parol tiklash havolasi shu bazaviy URL bilan quriladi
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
+  # Yuklangan fayl URL'lari shu bazaviy manzil bilan qaytariladi (brauzer ochadi)
+  public-url: ${PUBLIC_URL:http://localhost:4000}
+  uploads:
+    dir: ${UPLOADS_DIR:uploads}
+  mail:
+    from: ${MAIL_FROM:no-reply@lms.chashma.uz}
+  rate-limit:
+    # Auth endpointlari (login/register/parol tiklash) uchun IP bo'yicha limit
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    rps: ${RATE_LIMIT_RPS:2}
+    burst: ${RATE_LIMIT_BURST:4}

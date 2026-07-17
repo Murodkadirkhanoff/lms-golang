@@ -10,6 +10,7 @@ import { LoadingState } from "@/components/shared/states";
 import { coursesService } from "@/services/courses.service";
 import { useWishlist } from "@/features/wishlist/wishlist-context";
 import { useCart } from "@/features/cart/cart-context";
+import { useCategoryName } from "@/features/courses/use-category-name";
 import { useT } from "@/providers/locale-provider";
 import { ROUTES } from "@/constants";
 import { formatNumber, formatPrice } from "@/lib/utils";
@@ -18,6 +19,7 @@ export default function WishlistPage() {
   const wishlist = useWishlist();
   const cart = useCart();
   const t = useT();
+  const categoryName = useCategoryName();
   const { data: courses, isLoading } = useQuery({
     queryKey: ["wishlist", wishlist.ids],
     queryFn: () => coursesService.getByIds(wishlist.ids),
@@ -66,7 +68,7 @@ export default function WishlistPage() {
                   <Star className="size-3.5 fill-amber-400 text-amber-400" />
                   <span className="font-semibold">{course.rating}</span>
                   <span className="text-muted-foreground">({formatNumber(course.ratingCount)})</span>
-                  <Badge variant="secondary" className="ml-2">{t(`cat.${course.category.replace(/\s/g, "")}`)}</Badge>
+                  <Badge variant="secondary" className="ml-2">{categoryName(course.category)}</Badge>
                 </div>
               </div>
               <div className="flex items-center gap-3 sm:flex-col sm:items-end">

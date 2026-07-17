@@ -1,17 +1,18 @@
 import { api, USE_MOCK } from "@/lib/axios";
-import type { Order } from "@/types";
+import type { Order, Paginated } from "@/types";
 import { orders } from "./mock/data";
 
 const delay = (ms = 400) => new Promise((r) => setTimeout(r, ms));
 
 export const ordersService = {
-  async list(): Promise<Order[]> {
+  async list(page = 1, pageSize = 20): Promise<Paginated<Order>> {
     if (USE_MOCK) {
       await delay();
-      return orders;
+      const start = (page - 1) * pageSize;
+      return { items: orders.slice(start, start + pageSize), page, pageSize, total: orders.length };
     }
-    const { data } = await api.get("/me/orders");
-    return data.items;
+    const { data } = await api.get("/me/orders", { params: { page, pageSize } });
+    return data;
   },
 
   async getById(id: string): Promise<Order> {

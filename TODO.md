@@ -20,55 +20,77 @@ Muhimlik tartibida. Belgi: [ ] — ochiq, [x] — bajarilgan.
   olib tashlandi (ko'rsatilgan = saqlangan), enrolled userga "davom etish"
   tugmasi ko'rsatiladi._
 
-- [ ] **3. Rate limiting yo'q** — login/register endpointlariga cheklovsiz
-  urinish mumkin (brute-force ochiq). `pkg/middleware`ga IP-based rate limiter
-  qo'shish kerak.
+- [x] **3. Rate limiting yo'q** — _Bajarildi (2026-07-17): `RateLimitFilter` —
+  IP bo'yicha token bucket (default 2 rps / burst 4, `RATE_LIMIT_*` env bilan
+  sozlanadi) login/register/parol-tiklash endpointlarida; 429 + Go'dagi kabi
+  `{"error": "rate limit exceeded"}`._
 
-- [ ] **4. Parolni tiklash real ishlamaydi** — reset token faqat server logiga
-  yoziladi, SMTP ulanmagan (auth-service `tokens.go`da TODO). Email
-  integratsiyasi kerak.
+- [x] **4. Parolni tiklash real ishlamaydi** — _Bajarildi (2026-07-17):
+  `spring-boot-starter-mail` + `MailService`; SMTP env orqali sozlanadi
+  (`SMTP_HOST`...), compose'da Mailpit (web UI: http://localhost:8025), SMTP
+  sozlanmagan bo'lsa havola logga yoziladi. Havola `FRONTEND_URL/reset-password`._
 
-- [ ] **5. Token eskirganda UX buziladi** — JWT 24 soatlik, refresh yo'q;
-  frontend axios interceptorida 401 da avtomatik logout/redirect yo'q.
+- [x] **5. Token eskirganda UX buziladi** — _Bajarildi (2026-07-17): axios
+  interceptorida 401 kelsa token/user tozalanadi va `/login?next=<joriy sahifa>`
+  ga yo'naltiriladi (login urinishining o'zi bundan mustasno)._
 
-- [ ] **6. Review'ga enrollment sharti yo'q** — istalgan login qilgan user
-  sotib olmagan kursiga ham baho qo'yadi (takror UNIQUE bilan yopilgan, xolos).
+- [x] **6. Review'ga enrollment sharti yo'q** — _Bajarildi (2026-07-17):
+  backend `EnrollmentApi.isEnrolled` tekshiradi (403), frontendda review formasi
+  faqat enrolled userga ko'rinadi._
 
 ## Funksional bo'shliqlar
 
-- [ ] **7. Quiz builder UI yo'q** — backendda `PUT /courses/{id}/quiz` tayyor,
-  studio'da quiz yaratish formasi yo'q. Hozir birorta kursga quiz qo'yib
-  bo'lmaydi.
+- [x] **7. Quiz builder UI yo'q** — _Bajarildi (2026-07-17): studio kurs
+  tahrirlash sahifasida `QuizBuilder` (savollar/variantlar/to'g'ri javob,
+  o'tish bali, vaqt) — `PUT /courses/{id}/quiz` ga ulandi._
 
-- [ ] **8. Review yozish UI yo'q** — `POST /courses/{id}/reviews` endpoint bor,
-  frontend formasi yo'q.
+- [x] **8. Review yozish UI yo'q** — _Bajarildi (2026-07-17): kurs sahifasida
+  enrolled user uchun yulduzli baho + izoh formasi (`ReviewForm`)._
 
-- [ ] **9. Video/fayl yuklash infratuzilmasi yo'q** — dars videosi oddiy URL
-  matn maydoni; kurs thumbnail bo'limi vizual, backendda fayl saqlash (S3/lokal)
-  umuman yo'q.
+- [x] **9. Video/fayl yuklash infratuzilmasi yo'q** — _Bajarildi (2026-07-17):
+  `POST /v1/uploads` (multipart, auth, video/rasm oq ro'yxati, 512MB limit),
+  fayllar docker volume'da (`/app/uploads`), `/uploads/**` statik beriladi.
+  Kursga `thumbnail_url` ustuni (V4), studio formada rasm yuklash + dars
+  videosi real yuklanadi (progress bilan). S3'ga o'tish `UploadController`ni
+  almashtirish bilan bo'ladi._
 
-- [ ] **10. Settings/Profile saqlanmaydi** — sahifalar soxta; profil yangilash
-  endpointi backendda ham yo'q. Profile'dagi o'quv statistikasi hardcoded.
+- [x] **10. Settings/Profile saqlanmaydi** — _Bajarildi (2026-07-17): backend
+  `GET /v1/me`, `PUT /v1/me/profile` (ism), `PUT /v1/me/password` (joriy parol
+  tasdig'i bilan); profile/settings sahifalari ulandi, o'quv statistikasi
+  `GET /me/stats` dan (real)._
 
-- [ ] **11. Katalog kategoriya filtri real rejimda ishlamaydi** — filtr
-  hardcoded `CATEGORIES` ro'yxatidan "Development" kabi qiymat yuboradi, backend
-  slug (`development`) kutadi → natija bo'sh. Yangi kategoriyalar filtrga
-  chiqmaydi. Kurs sahifasida kategoriya yorlig'i `t("cat."+nom)` — dinamik
-  kategoriyalarda xom i18n kaliti ko'rinadi. Filtrni `GET /categories`dan
-  to'ldirish kerak.
+- [x] **11. Katalog kategoriya filtri real rejimda ishlamaydi** — _Bajarildi
+  (2026-07-17): filtr `GET /categories` dan quriladi (qiymat — slug), kategoriya
+  yorlig'i barcha joylarda dinamik nomdan (`useCategoryName`, 3 til)._
 
 ## Kichikroq UX / texnik
 
-- [ ] **12. Notifications** — bittalab "o'qildi" qilish yo'q (faqat read-all);
-  navbar'da bell/badge yo'q.
-- [ ] **13. Learn sahifasi tablari soxta** — notes saqlanmaydi, Q&A
-  yuborilmaydi, resources ro'yxati hardcoded.
-- [ ] **14. Sertifikat "Download" soxta** — PDF generatsiya yo'q.
-- [ ] **15. Login redirect** — enroll/checkout login sahifasiga `?next=`siz
-  yuboradi, login'dan keyin foydalanuvchi qaytib kelmaydi (RequireAuth buni
-  qo'llaydi, shu joylar yo'q).
-- [ ] **16. Pagination yo'q** — `/me/orders`, `/me/courses`, `/admin/users`
-  unbounded.
-- [ ] **17. Admin tayinlash yo'li yo'q** — userni admin qilish faqat DB orqali.
-- [ ] **18. Checkout billing formasi** — "Amir Karimov" kabi hardcoded default
-  qiymatlar qolgan.
+- [x] **12. Notifications** — _Bajarildi (2026-07-17): `POST
+  /me/notifications/{id}/read` (bittalab), navbar'da bell + o'qilmaganlar soni
+  badge'i, sahifadagi belgilashlar endi serverga yoziladi._
+- [x] **13. Learn sahifasi tablari soxta** — _Bajarildi (2026-07-17): notes
+  localStorage'da dars kesimida saqlanadi; resources real dars kontentidan;
+  Q&A backendda saqlanadi (`course.lesson_questions` V5, GET/POST
+  `/lessons/{id}/questions`). Instruktor javob threadi — kelajak ishi._
+- [x] **14. Sertifikat "Download" soxta** — _Bajarildi (2026-07-17): `GET
+  /me/certificates/{id}/download` — OpenPDF bilan A4 landscape PDF (ism, kurs,
+  sana, ID); frontend tugmasi blob orqali yuklab oladi._
+- [x] **15. Login redirect** — _Bajarildi (2026-07-17): enroll/checkout endi
+  `?next=` bilan yuboradi; login sahifasi allaqachon qaytaradi edi._
+- [x] **16. Pagination** — _Bajarildi (2026-07-17): `/me/orders` va
+  `/me/courses` backendda sahifalandi (page/pageSize/total envelope);
+  purchases, my-courses va admin/users sahifalarida Pagination UI._
+- [x] **17. Admin tayinlash yo'li yo'q** — _Bajarildi (2026-07-17): `PATCH
+  /v1/admin/users/{id}/role` (o'z rolini o'zgartirish taqiqlangan); admin users
+  jadvalida rol select'i._
+- [x] **18. Checkout billing formasi** — _Bajarildi (2026-07-17): ism/email
+  login qilgan userdan prefill, hardcoded qiymatlar olib tashlandi._
+
+## Keyingi g'oyalar (yangi)
+
+- [ ] Q&A'da instruktor javoblari (threading) va Q&A'ga enrollment sharti.
+- [ ] Yuklangan videolarni paywall ortiga olish (hozir URL topilsa ochiq —
+  UUID'li nom taxmin qilib bo'lmaydi, lekin signed URL to'g'riroq).
+- [ ] Notification prefs / 2FA / billing kartalari (settings'dagi qolgan
+  bo'limlar vizual).
+- [ ] Rate limiter'ni k8s'da ko'p replica uchun markazlashtirish (Redis).

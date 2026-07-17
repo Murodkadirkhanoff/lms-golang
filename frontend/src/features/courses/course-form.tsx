@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { coursesService } from "@/services/courses.service";
 import { categoriesService } from "@/services/categories.service";
+import { uploadsService } from "@/services/uploads.service";
 import { courseSchema, type CourseFormValues } from "./course-schema";
 import { LANGUAGES, ROUTES } from "@/constants";
 import { formatPrice, slugify } from "@/lib/utils";
@@ -33,6 +34,9 @@ export function CourseForm({ courseId }: { courseId?: number }) {
   const router = useRouter();
   const t = useT();
   const [serverError, setServerError] = useState("");
+  const [thumbProgress, setThumbProgress] = useState<number | null>(null);
+  const [thumbError, setThumbError] = useState("");
+  const thumbInput = useRef<HTMLInputElement>(null);
   const isEdit = courseId != null;
 
   const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: categoriesService.list });
@@ -45,9 +49,8 @@ export function CourseForm({ courseId }: { courseId?: number }) {
 
   const methods = useForm<CourseFormValues>({
     resolver: zodResolver(courseSchema),
-    defaultValues: course
-      ? toFormValues(course)
-      : { lang: "uz", price: 0, isPublished: false, categoryId: null, description: "", modules: [] },
+    // Edit rejimida forma quyidagi useEffect'dagi reset() orqali to'ldiriladi
+    defaultValues: { lang: "uz", price: 0, isPublished: false, categoryId: null, description: "", thumbnailUrl: "", modules: [] },
   });
   const {
     register,
@@ -55,6 +58,7 @@ export function CourseForm({ courseId }: { courseId?: number }) {
     control,
     watch,
     reset,
+    setValue,
     formState: { errors },
   } = methods;
 
@@ -63,6 +67,7 @@ export function CourseForm({ courseId }: { courseId?: number }) {
     reset({
       title: course.title,
       description: course.description ?? "",
+      thumbnailUrl: course.thumbnailUrl ?? "",
       categoryId: course.categoryId ?? null,
       lang: course.lang,
       price: course.price,
@@ -85,13 +90,28 @@ export function CourseForm({ courseId }: { courseId?: number }) {
   const title = watch("title") ?? "";
   const description = watch("description") ?? "";
   const price = watch("price");
+  const thumbnailUrl = watch("thumbnailUrl") ?? "";
   const slug = slugify(title);
+
+  const uploadThumbnail = async (file: File) => {
+    setThumbError("");
+    setThumbProgress(0);
+    try {
+      const result = await uploadsService.upload(file, "image", setThumbProgress);
+      setValue("thumbnailUrl", result.url, { shouldDirty: true });
+    } catch (err) {
+      setThumbError(err instanceof Error ? err.message : t("common.somethingWrong"));
+    } finally {
+      setThumbProgress(null);
+    }
+  };
 
   const mutation = useMutation({
     mutationFn: (values: CourseFormValues) => {
       const input = {
         title: values.title,
         description: values.description ?? "",
+        thumbnailUrl: values.thumbnailUrl ?? "",
         categoryId: values.categoryId,
         lang: values.lang,
         price: values.price,
@@ -254,13 +274,46 @@ export function CourseForm({ courseId }: { courseId?: number }) {
             <CardDescription>{t("cf.thumbnailDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid place-items-center rounded-xl border-2 border-dashed p-8 text-center">
-              <ImagePlus className="size-8 text-muted-foreground" />
-              <p className="mt-2 text-sm font-semibold">
-                {t("cf.dragDrop")} <span className="text-primary">{t("cf.browse")}</span>
-              </p>
-              <p className="text-xs text-muted-foreground">{t("cf.fileHint")}</p>
-            </div>
+            <button
+              type="button"
+              disabled={thumbProgress !== null}
+              onClick={() => thumbInput.current?.click()}
+              className="grid w-full place-items-center overflow-hidden rounded-xl border-2 border-dashed p-0 text-center hover:bg-secondary/40 disabled:opacity-60"
+            >
+              {thumbnailUrl ? (
+                <div className="w-full">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- yuklangan rasm manzili dinamik */}
+                  <img src={thumbnailUrl} alt="" className="aspect-video w-full object-cover" />
+                  <p className="py-2 text-xs font-medium text-primary">{t("cf.thumbReplace")}</p>
+                </div>
+              ) : (
+                <div className="p-8">
+                  <ImagePlus className="mx-auto size-8 text-muted-foreground" />
+                  <p className="mt-2 text-sm font-semibold">
+                    {thumbProgress !== null
+                      ? t("cf.thumbUploading", { p: thumbProgress })
+                      : (
+                        <>
+                          {t("cf.dragDrop")} <span className="text-primary">{t("cf.browse")}</span>
+                        </>
+                      )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{t("cf.fileHint")}</p>
+                </div>
+              )}
+            </button>
+            <input
+              ref={thumbInput}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) uploadThumbnail(file);
+              }}
+            />
+            {thumbError && <p className="mt-2 text-xs text-destructive">{thumbError}</p>}
           </CardContent>
         </Card>
       </div>
