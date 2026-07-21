@@ -1,0 +1,11 @@
+DROP TABLE IF EXISTS course.lesson_questions;
+DROP TABLE IF EXISTS course.quiz_attempts;
+DROP TABLE IF EXISTS course.quiz_questions;
+DROP TABLE IF EXISTS course.quizzes;
+DROP TABLE IF EXISTS course.reviews;
+DROP TABLE IF EXISTS course.lessons;
+DROP TABLE IF EXISTS course.modules;
+DROP TABLE IF EXISTS course.courses;
+DROP FUNCTION IF EXISTS course.set_category_depth();
+DROP TABLE IF EXISTS course.categories;
+DROP SCHEMA IF EXISTS course;

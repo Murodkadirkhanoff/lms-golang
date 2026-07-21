@@ -1,4 +1,4 @@
-# To'liq stack: Postgres + Java backend (:4000) + Next.js frontend (:3000).
+# To'liq stack: Postgres + Go backend (:4000) + Next.js frontend (:3000).
 # Ishga tushirish:  docker compose up -d --build
 # Sozlamalar `.env` faylidan olinadi (namuna: .env.example).
 name: lms
@@ -32,14 +32,14 @@ services:
       retries: 5
 
   backend:
-    build: backend-java/lms
+    build: backend-go
     environment:
-      LMS_DB_URL: jdbc:postgresql://db:5432/lms
-      LMS_DB_USER: lms
-      LMS_DB_PASSWORD: ${DB_PASSWORD:-devpassword}
+      # Go backend pgx DSN'ni kutadi (yoki LMS_DB_HOST/PORT/... alohida)
+      LMS_DB_DSN: postgres://lms:${DB_PASSWORD:-devpassword}@db:5432/lms?sslmode=disable
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET .env faylida berilishi shart}
       JWT_TTL: ${JWT_TTL:-24h}
       LMS_ENV: ${LMS_ENV:-development}
+      LMS_PORT: "4000"
       CORS_TRUSTED_ORIGINS: ${CORS_TRUSTED_ORIGINS:-http://localhost:3000}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       SMTP_HOST: ${SMTP_HOST:-mailpit}
@@ -54,12 +54,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Go image'da curl yo'q; alpine busybox wget ishlatiladi
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:4000/v1/healthcheck"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:4000/v1/healthcheck || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 12
-      start_period: 30s
+      start_period: 20s
 
   frontend:
     build:
@@ -85,6 +86,8 @@ services:
 volumes:
   uploads:
   pgdata:
-    # Eski Go stack'dan qolgan volume — mavjud lms bazasi (userlar, kurslar)
-    # saqlanadi. Toza bazadan boshlash uchun nomni o'zgartiring (mas. lms_pgdata).
+    # Eski stack'dan qolgan volume — mavjud lms bazasi (userlar, kurslar)
+    # saqlanadi. Go migratsiyalari CREATE ... IF NOT EXISTS bo'lgani uchun
+    # mavjud jadvallarga tegmaydi. Toza bazadan boshlash uchun nomni
+    # o'zgartiring (mas. lms_pgdata) yoki `docker compose down -v` bajaring.
     name: backend_pgdata
